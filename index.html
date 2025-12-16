@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Truck Unloading App</title>
+
+  <!-- Libraries (UMD: works in Edge/Chrome/Firefox + mobile) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.20.2/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+  <style>
+    :root{
+      --bg0:#071018;
+      --bg1:#0b1622;
+      --card:#0f2234;
+      --card2:#0d1d2d;
+      --text:#eaf2ff;
+      --muted:#9fb3c8;
+      --line:rgba(255,255,255,.08);
+      --brand:#2ea8ff;
+      --brand2:#00d4ff;
+      --ok:#24c16a;
+      --warn:#ffb020;
+      --bad:#ff4d4d;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --radius: 18px;
+      --radius2: 26px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 18% 12%, rgba(46,168,255,.22), transparent 55%),
+        radial-gradient(900px 520px at 85% 18%, rgba(0,212,255,.16), transparent 56%),
+        radial-gradient(900px 700px at 20% 95%, rgba(36,193,106,.08), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+    .gridlines{
+      position:fixed; inset:0;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
+      background-size: 80px 80px;
+      opacity:.12;
+      pointer-events:none;
+      mask-image: radial-gradient(circle at 40% 20%, #000 20%, transparent 70%);
+    }
+    .hero{padding: 22px 16px 10px;max-width: 1280px;margin: 0 auto;}
+    .header{
+      display:flex;gap:16px;align-items:center;justify-content:space-between;
+      padding:18px 18px;border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border-radius: var(--radius2);box-shadow: var(--shadow);backdrop-filter: blur(10px);
+    }
+    .brandwrap{display:flex; align-items:center; gap:14px}
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      display:grid;place-items:center;
+      box-shadow: 0 10px 30px rgba(46,168,255,.25);
+    }
+    .logo svg{width:24px;height:24px}
+    h1{font-size:22px; margin:0}
+    .subtitle{color:var(--muted); font-size:13px; margin-top:2px}
+    .topActions{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
+    .pill{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding:8px 12px;border-radius: 999px;font-size:12px;
+      display:flex; align-items:center; gap:8px;user-select:none;
+    }
+    .pill b{font-weight:700}
+    .content{max-width:1280px;margin: 14px auto 42px;padding: 0 16px;}
+    .tabs{
+      display:flex;gap:10px;flex-wrap:wrap;padding:10px;
+      background: rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow);
+    }
+    .tabBtn{
+      padding:10px 14px;border-radius:999px;border:1px solid var(--line);
+      color:var(--text);background: rgba(255,255,255,.02);
+      cursor:pointer;font-weight:600;font-size:13px;
+      display:flex; align-items:center; gap:8px;
+      transition:.15s transform, .15s background, .15s border;
+    }
+    .tabBtn:hover{transform: translateY(-1px); background: rgba(255,255,255,.05)}
+    .tabBtn.active{
+      border-color: rgba(46,168,255,.55);
+      background: linear-gradient(135deg, rgba(46,168,255,.22), rgba(0,212,255,.12));
+      box-shadow: 0 10px 30px rgba(46,168,255,.16);
+    }
+    .panel{
+      margin-top:14px;border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border-radius: var(--radius2);box-shadow: var(--shadow);overflow:hidden;
+    }
+    .panelHeader{
+      padding:14px 16px;border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .panelHeader h2{margin:0; font-size:15px;display:flex; align-items:center; gap:10px;}
+    .panelHeader small{color:var(--muted)}
+    .panelBody{padding:16px}
+    .grid{display:grid;grid-template-columns: 1.2fr .8fr;gap:14px;}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr}.topActions{justify-content:flex-start}}
+    .card{
+      border:1px solid var(--line);
+      background: rgba(10,18,28,.55);
+      border-radius: var(--radius);
+      padding:14px;
+    }
+    .row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
+    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+    input, select, textarea{
+      width:100%;padding:11px 12px;border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);outline:none;
+      background: rgba(255,255,255,.04);color: var(--text);font-size:14px;
+    }
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(46,168,255,.55);box-shadow: 0 0 0 4px rgba(46,168,255,.14);
+    }
+    .col{flex:1; min-width: 220px}
+    .btn{
+      border:none;cursor:pointer;font-weight:700;
+      padding:11px 14px;border-radius: 14px;color:#061019;
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      box-shadow: 0 12px 26px rgba(46,168,255,.22);
+      transition: .15s transform, .15s filter;white-space:nowrap;
+    }
+    .btn:hover{transform: translateY(-1px); filter:brightness(1.02)}
+    .btn:active{transform: translateY(0px)}
+    .btn.secondary{
+      color: var(--text);
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow:none;
+    }
+    .btn.danger{
+      color:white;
+      background: linear-gradient(135deg, rgba(255,77,77,.95), rgba(255,128,128,.7));
+      box-shadow: 0 12px 26px rgba(255,77,77,.18);
+    }
+    .hint{color:var(--muted); font-size:13px; line-height:1.45}
+    .slots{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(240px, 1fr));
+      gap:12px;margin-top:12px;
+    }
+    @media (max-width: 620px){ .slots{grid-template-columns:1fr} }
+    .slot{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      border-radius: 18px;
+      padding:14px;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+    }
+    .slot .time{font-weight:800; font-size:16px}
+    .slot .meta{color:var(--muted); font-size:12px; margin-top:2px}
+    .badge{
+      padding:5px 10px;border-radius:999px;font-size:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);color: var(--text);
+    }
+    .badge.ok{border-color: rgba(36,193,106,.35); background: rgba(36,193,106,.12)}
+    .badge.busy{border-color: rgba(255,176,32,.35); background: rgba(255,176,32,.12)}
+    .slotActions{display:flex; gap:8px; align-items:center}
+    .slotActions .btn{padding:9px 12px; border-radius: 12px; font-size:13px}
+    .slotActions .btn.secondary{padding:9px 12px}
+    .statusBox{
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:18px;padding:12px;background: rgba(255,255,255,.03);margin-top:12px;
+    }
+    .statusTitle{font-weight:800; margin:0 0 6px}
+    .statusText{margin:0; color:var(--muted); font-size:13px}
+    .statusSuccess .statusTitle{color: var(--ok)}
+    .statusError .statusTitle{color: var(--bad)}
+    .statusWarn .statusTitle{color: var(--warn)}
+    .mono{
+      font-family: var(--mono);font-size: 12px;
+      background: rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.12);
+      padding:10px;border-radius: 14px;overflow:auto;white-space: nowrap;
+    }
+    .twoBtns{display:flex; gap:10px; flex-wrap:wrap}
+    .hr{height:1px; background: var(--line); margin:12px 0}
+    .lock{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+    .lock input{max-width:220px}
+    .tableWrap{overflow:auto; border-radius: 16px; border:1px solid var(--line); background: rgba(0,0,0,.18)}
+    table{width:100%; border-collapse:collapse; min-width: 860px}
+    th,td{padding:10px 10px; border-bottom:1px solid rgba(255,255,255,.08); font-size:13px}
+    th{color: var(--muted); text-align:left; font-weight:700; background: rgba(255,255,255,.03)}
+    tr:hover td{background: rgba(255,255,255,.02)}
+    .small{font-size:12px; color:var(--muted)}
+    .footerNote{color:var(--muted); font-size:12px; margin-top:10px}
+    .qrPreview{
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+      margin-top:10px;padding:10px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;background: rgba(255,255,255,.03);
+    }
+    .qrPreview canvas{
+      width:96px; height:96px;border-radius:12px;
+      background:#fff;padding:8px;
+    }
+    .qrPreview .hint{margin:0}
+  </style>
+</head>
+
+<body>
+  <div class="gridlines"></div>
+
+  <div class="hero">
+    <div class="header">
+      <div class="brandwrap">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M7 17h10m-9-9h8m-7-3h6M6.5 21h11A2.5 2.5 0 0 0 20 18.5V5.5A2.5 2.5 0 0 0 17.5 3h-11A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21Z" stroke="white" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Truck Unloading App</h1>
+          <div class="subtitle">Carrier booking + cancel • Scan ticket • Internal dashboard (locked)</div>
+        </div>
+      </div>
+
+      <div class="topActions">
+        <div class="pill">📄 <b>Modern PDF</b></div>
+        <div class="pill">🏷️ <b>Barcode</b> (CODE128)</div>
+        <div class="pill">🔳 <b>QR</b> scan</div>
+        <div class="pill">🧾 <b>Excel</b> export</div>
+        <div class="pill">🛡️ <b>Internal</b> locked (1234)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="tabs" role="tablist">
+      <button class="tabBtn active" data-tab="carrierBooking" role="tab">🚚 Carrier booking</button>
+      <button class="tabBtn" data-tab="carrierCancel" role="tab">🧯 Carrier cancel</button>
+      <button class="tabBtn" data-tab="scanTicket" role="tab">🔎 Scan ticket</button>
+      <button class="tabBtn" data-tab="internal" role="tab">🛡️ Internal (locked)</button>
+    </div>
+
+    <!-- CARRIER BOOKING -->
+    <section class="panel" id="tab_carrierBooking">
+      <div class="panelHeader">
+        <h2>🚚 Carrier booking</h2>
+        <small>Date format is local browser date (Europe/Berlin recommended)</small>
+      </div>
+      <div class="panelBody">
+        <div class="grid">
+          <div class="card">
+            <div class="row">
+              <div class="col">
+                <label>Date</label>
+                <input id="dateInput" type="date" />
+              </div>
+              <div class="col">
+                <label>Working hours</label>
+                <select id="hoursSelect">
+                  <option value="08:00-16:00">08:00 – 16:00</option>
+                  <option value="06:00-14:00">06:00 – 14:00</option>
+                  <option value="14:00-22:00">14:00 – 22:00</option>
+                  <option value="07:00-19:00">07:00 – 19:00</option>
+                </select>
+              </div>
+              <div class="col" style="min-width:200px">
+                <button class="btn" id="loadSlotsBtn">Load slots</button>
+              </div>
+            </div>
+
+            <p class="hint" style="margin:10px 0 0">
+              Select an available slot (2 hours). After booking you get a <b>Booking ID</b> and a modern PDF ticket with <b>Barcode + QR</b>.
+              Booking ID format: <b>Carrier-Plate-Package-XXX</b>.
+            </p>
+
+            <div class="slots" id="slotsGrid"></div>
+
+            <div class="statusBox" id="bookingStatus" style="display:none"></div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin:0 0 10px">Carrier details</h3>
+
+            <div class="row">
+              <div class="col">
+                <label>Company / Carrier *</label>
+                <input id="carrierCompany" placeholder="e.g. DHL / DSV / DB Schenker" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label>Truck plate *</label>
+                <input id="carrierPlate" placeholder="e.g. DU-AB 1234" />
+              </div>
+              <div class="col">
+                <label>Driver phone *</label>
+                <input id="carrierPhone" placeholder="e.g. +49..." />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label>Package No *</label>
+                <input id="carrierPackage" placeholder="e.g. PKG-001 / PL-7788" />
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div id="afterBooking" style="display:none">
+              <div class="statusBox statusSuccess">
+                <p class="statusTitle" style="margin:0 0 6px">Booked successfully.</p>
+                <p class="statusText" style="margin:0 0 8px">Booking ID</p>
+                <div class="mono" id="bookingIdBox"></div>
+
+                <div class="qrPreview">
+                  <canvas id="qrCanvasPreview" width="150" height="150"></canvas>
+                  <p class="hint"><b>QR code</b> encodes the Booking ID for quick scan at gate / check-in.</p>
+                </div>
+              </div>
+
+              <div class="twoBtns" style="margin-top:12px">
+                <button class="btn" id="downloadCarrierPdfBtn">Download PDF (Carrier)</button>
+                <button class="btn secondary" id="downloadInternalPdfBtn">Download PDF (Internal)</button>
+                <button class="btn danger" id="downloadCancelledPdfBtn" title="Generate a cancelled ticket">Cancelled PDF</button>
+              </div>
+
+              <p class="footerNote">
+                Note: On iPhone/iPad Safari, the PDF opens in a new tab (then use Share → Save to Files). On desktop, it downloads directly.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARRIER CANCEL -->
+    <section class="panel" id="tab_carrierCancel" style="display:none">
+      <div class="panelHeader">
+        <h2>🧯 Carrier cancel</h2>
+        <small>Booking ID is enough (no cancel token)</small>
+      </div>
+      <div class="panelBody">
+        <div class="grid">
+          <div class="card">
+            <div class="row">
+              <div class="col">
+                <label>Booking ID *</label>
+                <input id="cancelBookingId" placeholder="Carrier-Plate-Package-123" />
+              </div>
+              <div class="col">
+                <label>Confirm by typing: CANCEL</label>
+                <input id="cancelConfirm" placeholder="CANCEL" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label>Reason (optional)</label>
+                <textarea id="cancelReason" rows="3" placeholder="Traffic, driver issue, rebooked, etc."></textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col" style="min-width:200px">
+                <button class="btn danger" id="cancelBtn">Cancel booking</button>
+              </div>
+              <div class="col">
+                <div class="statusBox" id="cancelStatus" style="display:none"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin:0 0 10px">How cancel works</h3>
+            <p class="hint" style="margin:0">
+              • Cancelling marks the booking as <b>cancelled</b> but keeps the record for tracking.<br>
+              • Slots become available again after cancellation.<br>
+              • Cancelled PDF includes a big red overlay.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCAN TICKET -->
+    <section class="panel" id="tab_scanTicket" style="display:none">
+      <div class="panelHeader">
+        <h2>🔎 Scan ticket</h2>
+        <small>Paste Booking ID (from barcode or QR) to see status quickly</small>
+      </div>
+      <div class="panelBody">
+        <div class="grid">
+          <div class="card">
+            <div class="row">
+              <div class="col">
+                <label>Booking ID</label>
+                <input id="scanBookingId" placeholder="Carrier-Plate-Package-123" />
+              </div>
+              <div class="col" style="min-width:220px">
+                <button class="btn" id="scanBtn">Find booking</button>
+              </div>
+            </div>
+            <div class="statusBox" id="scanResult" style="display:none"></div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin:0 0 10px">Tip</h3>
+            <p class="hint" style="margin:0">
+              The <b>barcode + QR</b> both encode the Booking ID. A scanner reads it and you paste it here.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERNAL -->
+    <section class="panel" id="tab_internal" style="display:none">
+      <div class="panelHeader">
+        <h2>🛡️ Internal dashboard</h2>
+        <small>Protected view (passcode required)</small>
+      </div>
+      <div class="panelBody">
+        <div class="card" id="internalLockCard">
+          <div class="lock">
+            <div>
+              <label>Enter passcode</label>
+              <input id="internalPass" type="password" placeholder="1234" />
+            </div>
+            <button class="btn" id="unlockBtn">Unlock</button>
+            <button class="btn secondary" id="lockBtn" style="display:none">Lock</button>
+            <span class="small" id="lockHint">Default passcode: <b>1234</b></span>
+          </div>
+          <div class="statusBox" id="lockStatus" style="display:none"></div>
+        </div>
+
+        <div id="internalArea" style="display:none">
+          <div class="grid">
+            <div class="card">
+              <div class="row">
+                <div class="col">
+                  <label>Date</label>
+                  <input id="internalDate" type="date" />
+                </div>
+                <div class="col">
+                  <label>Working hours</label>
+                  <select id="internalHours">
+                    <option value="08:00-16:00">08:00 – 16:00</option>
+                    <option value="06:00-14:00">06:00 – 14:00</option>
+                    <option value="14:00-22:00">14:00 – 22:00</option>
+                    <option value="07:00-19:00">07:00 – 19:00</option>
+                  </select>
+                </div>
+                <div class="col" style="min-width:220px">
+                  <button class="btn" id="refreshInternalBtn">Refresh</button>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:12px">
+                <button class="btn secondary" id="exportExcelBtn">Export to Excel</button>
+                <button class="btn secondary" id="clearAllBtn" title="Clears all stored bookings">Clear ALL data</button>
+              </div>
+
+              <p class="hint" style="margin:12px 0 0">
+                This internal table includes operational data (who, when, phone, package, status). Use Excel export for reporting.
+              </p>
+            </div>
+
+            <div class="card">
+              <h3 style="margin:0 0 10px">Internal checklist</h3>
+              <p class="hint" style="margin:0">
+                • Confirm slot occupancy<br>
+                • Check driver phone + package no<br>
+                • See cancelled bookings instantly<br>
+                • Print internal ticket only when needed
+              </p>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:14px">
+            <div class="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Booking ID</th>
+                    <th>Company</th>
+                    <th>Plate</th>
+                    <th>Driver phone</th>
+                    <th>Package No</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="internalTableBody"></tbody>
+              </table>
+            </div>
+            <div class="small" style="margin-top:8px">
+              Actions: Carrier PDF, Internal PDF, Cancelled PDF, Cancel booking.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+<script>
+const STORAGE_KEY = "truck_unloading_bookings_v2";
+const INTERNAL_PASS = "1234";
+
+function $(id){ return document.getElementById(id); }
+function pad2(n){ return String(n).padStart(2,"0"); }
+function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function safeText(v){ return (v===undefined||v===null) ? "" : String(v); }
+function cleanPart(s){ return safeText(s).trim().replace(/\s+/g,"-").replace(/[^\w\-]/g,"").slice(0,60) || "NA"; }
+function loadAll(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"); }catch(e){ return []; } }
+function saveAll(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+function isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1); }
+function openPreDownloadTabIfNeeded(){ if(!isIOS()) return null; const w=window.open("","_blank"); return w||null; }
+function downloadBlobCrossPlatform(blob, filename, preOpenedWindow=null){
+  const url = URL.createObjectURL(blob);
+  if (isIOS()){
+    if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.location.href=url;
+    else window.location.href=url;
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    return;
+  }
+  const a=document.createElement("a");
+  a.href=url; a.download=filename; a.rel="noopener";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url); document.body.removeChild(a);}, 250);
+}
+function statusBox(el, type, title, text){
+  el.style.display="block";
+  el.className="statusBox " + (type?("status"+type):"");
+  el.innerHTML = `<p class="statusTitle">${safeText(title)}</p><p class="statusText">${safeText(text)}</p>`;
+}
+function parseHours(hours){ const [s,e]=hours.split("-"); return {start:s,end:e}; }
+function addMinutes(hhmm, minutes){
+  const [h,m]=hhmm.split(":").map(Number);
+  const d=new Date(2000,0,1,h,m,0,0);
+  d.setMinutes(d.getMinutes()+minutes);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function cmpTime(a,b){ return a.localeCompare(b); }
+function buildSlots(hours){
+  const {start,end}=parseHours(hours);
+  const slots=[]; let t=start;
+  while (cmpTime(addMinutes(t,120), end) <= 0){
+    const t2=addMinutes(t,120);
+    slots.push({start:t,end:t2}); t=t2;
+  }
+  return slots;
+}
+function nextSequenceForDate(dateISO){
+  const all=loadAll().filter(b=>b.date===dateISO);
+  let max=0;
+  for (const b of all){
+    const tail=(b.id||"").split("-").pop();
+    const n=parseInt(tail,10);
+    if(!isNaN(n)) max=Math.max(max,n);
+  }
+  return max+1;
+}
+function makeBookingId(company, plate, pkg, seq){
+  return `${cleanPart(company)}-${cleanPart(plate)}-${cleanPart(pkg)}-${seq}`;
+}
+function makeBarcodeDataURL(text){
+  const canvas=document.createElement("canvas");
+  JsBarcode(canvas, safeText(text), {format:"CODE128",width:2,height:56,displayValue:false,margin:0});
+  return canvas.toDataURL("image/png");
+}
+function makeQrDataURL(text, size=200){
+  const qr=new QRious({value:safeText(text), size:size, level:"H"});
+  return qr.toDataURL("image/png");
+}
+function renderQrPreview(bookingId){
+  try{
+    const canvas=$("qrCanvasPreview");
+    if(!canvas) return;
+    new QRious({element:canvas, value:safeText(bookingId), size:150, level:"H"});
+  }catch(e){ console.warn("QR preview failed:", e); }
+}
+function addTicketHeader(doc, title, sub){
+  doc.setFillColor(11, 33, 52);
+  doc.rect(0, 0, 210, 34, "F");
+  doc.setFillColor(46, 168, 255);
+  doc.rect(0, 34, 210, 2, "F");
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(18);
+  doc.text(title, 16, 20);
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10.5);
+  doc.setTextColor(210,225,255);
+  doc.text(sub, 16, 28);
+  doc.setTextColor(10,18,28);
+}
+function addWatermarkCancelled(doc){
+  try{
+    if (doc.saveGraphicsState) doc.saveGraphicsState();
+    doc.setTextColor(255, 70, 70);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(60);
+    doc.text("CANCELLED", 105, 150, { align:"center", angle: 35 });
+    doc.setLineWidth(3);
+    doc.setDrawColor(255,70,70);
+    doc.line(30, 210, 180, 70);
+    if (doc.restoreGraphicsState) doc.restoreGraphicsState();
+    doc.setTextColor(10,18,28);
+  }catch(e){}
+}
+function addKeyValueBox(doc, x, y, w, lines){
+  doc.setDrawColor(230);
+  doc.setFillColor(250);
+  doc.roundedRect(x, y, w, lines.length*8 + 10, 4, 4, "FD");
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(11);
+  let yy=y+10;
+  for (const [k,v] of lines){
+    doc.setTextColor(90); doc.text(`${k}:`, x+8, yy);
+    doc.setTextColor(10); doc.text(safeText(v), x+55, yy);
+    yy += 8;
+  }
+}
+async function generatePdf(booking, mode, preOpenedWindow=null){
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:"mm", format:"a4" });
+    const isInternal = (mode === "internal");
+    const statusTag = booking.cancelled ? "CANCELLED" : "ACTIVE";
+    const modeTag = isInternal ? "INTERNAL" : "CARRIER";
+    addTicketHeader(doc, "Truck Unloading Ticket", `${modeTag} • ${statusTag} • ${booking.date} • ${booking.start}-${booking.end}`);
+    doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text("Booking ID", 16, 50);
+    doc.setFont("courier","bold"); doc.setFontSize(12);
+    doc.setFillColor(245); doc.setDrawColor(230);
+    doc.roundedRect(16, 54, 178, 12, 4, 4, "FD");
+    doc.text(safeText(booking.id), 20, 62);
+
+    const barcodeURL = makeBarcodeDataURL(booking.id);
+    const qrURL = makeQrDataURL(booking.id, 220);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(70);
+    doc.text("Barcode", 16, 74);
+    doc.addImage(barcodeURL, "PNG", 16, 76, 120, 18);
+    doc.text("QR", 160, 74);
+    doc.addImage(qrURL, "PNG", 160, 76, 34, 34);
+    doc.setTextColor(10);
+
+    addKeyValueBox(doc, 16, 115, 178, [
+      ["Date", booking.date],
+      ["Time", `${booking.start} - ${booking.end}`],
+      ["Company", booking.company],
+      ["Truck plate", booking.plate],
+      ["Driver phone", booking.phone],
+      ["Package No", booking.packageNo],
+    ]);
+
+    if (isInternal){
+      doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.text("Internal operational notes", 16, 178);
+      doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(70);
+      doc.text("• Check unloading bay readiness", 18, 188);
+      doc.text("• Verify package & documents", 18, 195);
+      doc.text("• Contact driver if delays", 18, 202);
+      doc.setTextColor(10); doc.setFontSize(9);
+      doc.text("Internal view contains sensitive info. Do not share externally.", 16, 212);
+    } else {
+      doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(70);
+      doc.text("Please arrive 10 minutes early. Present this ticket at gate/check-in.", 16, 186);
+      doc.text("If you cannot make the slot, cancel using Booking ID on the cancel tab.", 16, 193);
+      doc.setTextColor(10);
+    }
+
+    if (booking.cancelled) addWatermarkCancelled(doc);
+
+    const safeId = cleanPart(booking.id);
+    const fileName = `UNLOADING_${modeTag}_${statusTag}_${booking.date}_${booking.start.replace(":","")}_${safeId}.pdf`;
+
+    if (!isIOS()){ doc.save(fileName); return; }
+    const pdfBlob = doc.output("blob");
+    downloadBlobCrossPlatform(pdfBlob, fileName, preOpenedWindow);
+  }catch(err){
+    console.error("PDF ERROR:", err);
+    alert("PDF generation failed.\nOpen DevTools (F12) → Console and copy the red error here.");
+    if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
+  }
+}
+
+// Tabs
+const tabBtns = document.querySelectorAll(".tabBtn");
+tabBtns.forEach(b=>{
+  b.addEventListener("click", ()=>{
+    tabBtns.forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    const tab=b.dataset.tab;
+    ["carrierBooking","carrierCancel","scanTicket","internal"].forEach(t=>{
+      $("tab_"+t).style.display = (t===tab) ? "block" : "none";
+    });
+  });
+});
+
+let lastBooking=null;
+let currentSlots=[];
+
+function setDefaultDates(){
+  $("dateInput").value=todayISO();
+  $("internalDate").value=todayISO();
+}
+setDefaultDates();
+
+function validateCarrierForm(){
+  const company=$("carrierCompany").value.trim();
+  const plate=$("carrierPlate").value.trim();
+  const phone=$("carrierPhone").value.trim();
+  const pkg=$("carrierPackage").value.trim();
+  if(!company||!plate||!phone||!pkg) return {ok:false,msg:"Company, Truck plate, Driver phone and Package No are mandatory."};
+  return {ok:true, company, plate, phone, pkg};
+}
+function isSlotBooked(dateISO, start, end){
+  const all=loadAll();
+  return all.some(b=>b.date===dateISO && b.start===start && b.end===end && !b.cancelled);
+}
+function renderSlots(){
+  const grid=$("slotsGrid"); grid.innerHTML="";
+  const dateISO=$("dateInput").value;
+  currentSlots.forEach(s=>{
+    const booked=isSlotBooked(dateISO, s.start, s.end);
+    const el=document.createElement("div");
+    el.className="slot";
+    el.innerHTML=`
+      <div>
+        <div class="time">${s.start} – ${s.end}</div>
+        <div class="meta">${booked ? "Booked" : "Available"}</div>
+      </div>
+      <div class="slotActions">
+        <span class="badge ${booked ? "busy" : "ok"}">${booked ? "Busy" : "Free"}</span>
+        <button class="btn ${booked ? "secondary" : ""}" ${booked ? "disabled" : ""}>Book</button>
+      </div>
+    `;
+    const btn=el.querySelector("button");
+    btn.addEventListener("click", ()=>{
+      if(booked) return;
+      const v=validateCarrierForm();
+      if(!v.ok){ statusBox($("bookingStatus"), "Error", "Missing data", v.msg); return; }
+      const seq=nextSequenceForDate(dateISO);
+      const id=makeBookingId(v.company, v.plate, v.pkg, seq);
+      const booking={
+        id, date:dateISO, start:s.start, end:s.end,
+        company:v.company, plate:v.plate, phone:v.phone, packageNo:v.pkg,
+        cancelled:false, cancelReason:"", createdAt:new Date().toISOString()
+      };
+      const all=loadAll(); all.push(booking); saveAll(all);
+      lastBooking=booking;
+      $("afterBooking").style.display="block";
+      $("bookingIdBox").textContent=booking.id;
+      renderQrPreview(booking.id);
+      statusBox($("bookingStatus"), "Success", "Booked", `Slot ${s.start}-${s.end} reserved for ${booking.company}.`);
+      renderSlots();
+      refreshInternal();
+    });
+    grid.appendChild(el);
+  });
+}
+$("loadSlotsBtn").addEventListener("click", ()=>{
+  currentSlots=buildSlots($("hoursSelect").value);
+  renderSlots();
+  $("afterBooking").style.display = lastBooking ? "block" : "none";
+  if (lastBooking) renderQrPreview(lastBooking.id);
+});
+
+$("downloadCarrierPdfBtn").addEventListener("click", async ()=>{
+  if(!lastBooking) return alert("No recent booking. Book a slot first.");
+  const w=openPreDownloadTabIfNeeded();
+  await generatePdf(lastBooking, "carrier", w);
+});
+$("downloadInternalPdfBtn").addEventListener("click", async ()=>{
+  if(!lastBooking) return alert("No recent booking. Book a slot first.");
+  const w=openPreDownloadTabIfNeeded();
+  await generatePdf(lastBooking, "internal", w);
+});
+$("downloadCancelledPdfBtn").addEventListener("click", async ()=>{
+  if(!lastBooking) return alert("No recent booking. Book a slot first.");
+  const w=openPreDownloadTabIfNeeded();
+  await generatePdf({...lastBooking, cancelled:true}, "carrier", w);
+});
+
+// Cancel
+$("cancelBtn").addEventListener("click", ()=>{
+  const id=$("cancelBookingId").value.trim();
+  const confirm=$("cancelConfirm").value.trim().toUpperCase();
+  const reason=$("cancelReason").value.trim();
+  if(!id){ statusBox($("cancelStatus"), "Error", "Missing Booking ID", "Please enter the Booking ID."); return; }
+  if(confirm!=="CANCEL"){ statusBox($("cancelStatus"), "Warn", "Confirmation needed", "Type CANCEL to confirm."); return; }
+  const all=loadAll();
+  const idx=all.findIndex(b=>b.id===id);
+  if(idx<0){ statusBox($("cancelStatus"), "Error", "Not found", "This Booking ID does not exist."); return; }
+  if(all[idx].cancelled){ statusBox($("cancelStatus"), "Warn", "Already cancelled", "This booking is already cancelled."); return; }
+  all[idx].cancelled=true;
+  all[idx].cancelReason=reason||"Cancelled by carrier";
+  all[idx].cancelledAt=new Date().toISOString();
+  saveAll(all);
+  statusBox($("cancelStatus"), "Success", "Cancelled", "Booking is cancelled and slot is now free.");
+  renderSlots(); refreshInternal();
+  if(lastBooking && lastBooking.id===id) lastBooking.cancelled=true;
+});
+
+// Scan
+$("scanBtn").addEventListener("click", ()=>{
+  const id=$("scanBookingId").value.trim();
+  if(!id){ statusBox($("scanResult"), "Error", "Missing", "Paste or type a Booking ID."); return; }
+  const all=loadAll();
+  const b=all.find(x=>x.id===id);
+  if(!b){ statusBox($("scanResult"), "Error", "Not found", "No booking found with this ID."); return; }
+  const state=b.cancelled ? "CANCELLED" : "ACTIVE";
+  const msg =
+    `Company: ${b.company}\n`+
+    `Slot: ${b.date} ${b.start}-${b.end}\n`+
+    `Plate: ${b.plate}\n`+
+    `Phone: ${b.phone}\n`+
+    `Package: ${b.packageNo}\n`+
+    (b.cancelled ? `Reason: ${b.cancelReason||""}` : "");
+  const box=$("scanResult");
+  box.style.display="block";
+  box.className="statusBox " + (b.cancelled ? "statusWarn" : "statusSuccess");
+  box.innerHTML = `
+    <p class="statusTitle">${state}</p>
+    <pre class="mono" style="white-space:pre-wrap">${safeText(msg)}</pre>
+    <div class="twoBtns" style="margin-top:10px">
+      <button class="btn secondary" id="scanCarrierPdf">Carrier PDF</button>
+      <button class="btn secondary" id="scanInternalPdf">Internal PDF</button>
+      <button class="btn danger" id="scanCancelledPdf">Cancelled PDF</button>
+    </div>
+  `;
+  $("scanCarrierPdf").addEventListener("click", async ()=>{ const w=openPreDownloadTabIfNeeded(); await generatePdf(b,"carrier",w); });
+  $("scanInternalPdf").addEventListener("click", async ()=>{ const w=openPreDownloadTabIfNeeded(); await generatePdf(b,"internal",w); });
+  $("scanCancelledPdf").addEventListener("click", async ()=>{ const w=openPreDownloadTabIfNeeded(); await generatePdf({...b,cancelled:true},"carrier",w); });
+});
+
+// Internal lock + table
+function setLocked(locked){
+  $("internalArea").style.display = locked ? "none" : "block";
+  $("lockBtn").style.display = locked ? "none" : "inline-block";
+  $("unlockBtn").style.display = locked ? "inline-block" : "none";
+  $("internalPass").value="";
+  $("lockStatus").style.display="none";
+}
+setLocked(true);
+$("unlockBtn").addEventListener("click", ()=>{
+  const p=$("internalPass").value.trim();
+  if(p!==INTERNAL_PASS){ statusBox($("lockStatus"), "Error", "Wrong passcode", "Access denied."); return; }
+  setLocked(false);
+  statusBox($("lockStatus"), "Success", "Unlocked", "Internal dashboard is unlocked.");
+  $("lockBtn").style.display="inline-block";
+  refreshInternal();
+});
+$("lockBtn").addEventListener("click", ()=> setLocked(true));
+$("refreshInternalBtn").addEventListener("click", refreshInternal);
+
+function refreshInternal(){
+  if($("internalArea").style.display==="none") return;
+  const dateISO=$("internalDate").value;
+  const hours=$("internalHours").value;
+  const slots=buildSlots(hours);
+  const all=loadAll().filter(b=>b.date===dateISO);
+  const tbody=$("internalTableBody");
+  tbody.innerHTML="";
+  function bookingForSlot(s){
+    const inSlot=all.filter(b=>b.start===s.start && b.end===s.end);
+    const active=inSlot.find(x=>!x.cancelled);
+    return active || inSlot[0] || null;
+  }
+  for(const s of slots){
+    const b=bookingForSlot(s);
+    const tr=document.createElement("tr");
+    if(!b){
+      tr.innerHTML=`
+        <td>${s.start}–${s.end}</td>
+        <td class="small">—</td><td class="small">—</td><td class="small">—</td><td class="small">—</td><td class="small">—</td>
+        <td><span class="badge ok">FREE</span></td><td class="small">—</td>`;
+      tbody.appendChild(tr);
+      continue;
+    }
+    const st=b.cancelled ? "CANCELLED" : "ACTIVE";
+    const badge=b.cancelled ? "busy" : "ok";
+    tr.innerHTML=`
+      <td>${s.start}–${s.end}</td>
+      <td><span class="mono">${safeText(b.id)}</span></td>
+      <td>${safeText(b.company)}</td>
+      <td>${safeText(b.plate)}</td>
+      <td>${safeText(b.phone)}</td>
+      <td>${safeText(b.packageNo)}</td>
+      <td><span class="badge ${badge}">${st}</span></td>
+      <td>
+        <div class="twoBtns">
+          <button class="btn secondary" data-act="pdfCarrier">Carrier PDF</button>
+          <button class="btn secondary" data-act="pdfInternal">Internal PDF</button>
+          <button class="btn danger" data-act="cancelPdf">Cancelled PDF</button>
+          <button class="btn danger" data-act="cancelBooking">Cancel</button>
+        </div>
+      </td>`;
+    tr.querySelectorAll("button").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const act=btn.dataset.act;
+        if(act==="pdfCarrier"){ const w=openPreDownloadTabIfNeeded(); await generatePdf(b,"carrier",w); }
+        if(act==="pdfInternal"){ const w=openPreDownloadTabIfNeeded(); await generatePdf(b,"internal",w); }
+        if(act==="cancelPdf"){ const w=openPreDownloadTabIfNeeded(); await generatePdf({...b,cancelled:true},"carrier",w); }
+        if(act==="cancelBooking"){
+          const all2=loadAll();
+          const idx=all2.findIndex(x=>x.id===b.id);
+          if(idx>=0){
+            if(!all2[idx].cancelled){
+              all2[idx].cancelled=true;
+              all2[idx].cancelReason="Cancelled by internal";
+              all2[idx].cancelledAt=new Date().toISOString();
+              saveAll(all2);
+              refreshInternal(); renderSlots();
+              alert("Booking cancelled.");
+            }else alert("Already cancelled.");
+          }
+        }
+      });
+    });
+    tbody.appendChild(tr);
+  }
+}
+
+$("exportExcelBtn").addEventListener("click", ()=>{
+  const dateISO=$("internalDate").value;
+  const all=loadAll().filter(b=>b.date===dateISO);
+  const rows=all.map(b=>({
+    "Booking ID": b.id,
+    "Date": b.date,
+    "Start": b.start,
+    "End": b.end,
+    "Company": b.company,
+    "Truck plate": b.plate,
+    "Driver phone": b.phone,
+    "Package No": b.packageNo,
+    "Status": b.cancelled ? "CANCELLED" : "ACTIVE",
+    "Cancel reason": b.cancelReason || "",
+    "Created at": b.createdAt || ""
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows.length ? rows : [{"Info":"No data for this date"}]);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Bookings");
+  XLSX.writeFile(wb, `Bookings_${dateISO}.xlsx`);
+});
+
+$("clearAllBtn").addEventListener("click", ()=>{
+  if(!confirm("This will delete ALL bookings from local storage. Continue?")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  lastBooking=null;
+  $("afterBooking").style.display="none";
+  renderSlots();
+  refreshInternal();
+});
+
+// init
+(function init(){
+  currentSlots=buildSlots($("hoursSelect").value);
+  renderSlots();
+})();
+</script>
+</body>
+</html>
