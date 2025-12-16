@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Truck Unloading App</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+<style>
+body{margin:0;font-family:system-ui;background:#0b1220;color:#eaf1ff}
+header{padding:20px;background:linear-gradient(135deg,#1f6bff,#00d4ff)}
+main{max-width:900px;margin:auto;padding:20px}
+.card{background:#111a2e;border-radius:16px;padding:16px;margin-bottom:16px}
+input,select{width:100%;padding:10px;border-radius:10px;border:none;background:#0c1430;color:white;margin-bottom:10px}
+button{padding:10px 14px;border-radius:10px;border:none;font-weight:700;cursor:pointer}
+.primary{background:linear-gradient(135deg,#1f6bff,#00d4ff);color:#041018}
+.mono{background:#060b1c;padding:10px;border-radius:10px;font-family:monospace}
+</style>
+</head>
+
+<body>
+<header>
+<h2>🚚 Truck Unloading App</h2>
+<p>Simple booking + PDF ticket</p>
+</header>
+
+<main>
+<div class="card">
+<label>Date</label>
+<input type="date" id="date">
+
+<label>Company</label>
+<input id="company">
+
+<label>Truck plate</label>
+<input id="plate">
+
+<label>Driver phone</label>
+<input id="phone">
+
+<label>Package No</label>
+<input id="pkg">
+
+<button class="primary" onclick="book()">Book</button>
+
+<div id="result" style="display:none">
+<p><b>Booking ID</b></p>
+<div class="mono" id="bid"></div>
+<br>
+<button class="primary" onclick="downloadPdf()">Download PDF</button>
+</div>
+</div>
+</main>
+
+<script>
+document.getElementById("date").value=new Date().toISOString().slice(0,10);
+let booking=null;
+
+function book(){
+ booking={
+  id:Date.now().toString(),
+  date:date.value,
+  company:company.value,
+  plate:plate.value,
+  phone:phone.value,
+  pkg:pkg.value
+ };
+ document.getElementById("bid").innerText=booking.id;
+ document.getElementById("result").style.display="block";
+}
+
+function barcode(text){
+ const c=document.createElement("canvas");
+ JsBarcode(c,text,{format:"CODE128",displayValue:false});
+ return c.toDataURL("image/png");
+}
+
+function downloadPdf(){
+ const {jsPDF}=window.jspdf;
+ const doc=new jsPDF();
+ doc.setFontSize(18);
+ doc.text("Truck Unloading Ticket",20,20);
+ doc.setFontSize(12);
+ doc.text("Booking ID: "+booking.id,20,35);
+ doc.text("Date: "+booking.date,20,45);
+ doc.text("Company: "+booking.company,20,55);
+ doc.text("Plate: "+booking.plate,20,65);
+ doc.text("Phone: "+booking.phone,20,75);
+ doc.text("Package: "+booking.pkg,20,85);
+ doc.addImage(barcode(booking.id),"PNG",20,95,120,30);
+ doc.save("truck_unloading_ticket.pdf");
+}
+</script>
+</body>
+</html>
