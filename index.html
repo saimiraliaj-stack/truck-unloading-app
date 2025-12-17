@@ -301,6 +301,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <!-- JsBarcode (CODE128) -->
   <script defer src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <!-- SheetJS for Excel export -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -1062,117 +1063,161 @@
     });
 
     /*********************
-     * Camera scanner (BarcodeDetector)
-     *********************/
-    let scanStream=null;
-    let scanRunning=false;
-    let useFront=false;
-    let raf=null;
+ * Camera scanner (QR-first, iPhone-safe)
+ * - Uses getUserMedia + jsQR (works on iOS Safari)
+ * - If BarcodeDetector exists, we still try it for qr_code (optional)
+ *********************/
+let scanStream=null;
+let scanRunning=false;
+let useFront=false;
+let raf=null;
 
-    function setScanStatus(t){ $("scanStatusText").textContent=t; }
+function setScanStatus(t){ $("scanStatusText").textContent=t; }
 
-    function stopScanner(){
-      scanRunning=false;
-      if(raf) cancelAnimationFrame(raf);
-      raf=null;
+function stopScanner(){
+  scanRunning=false;
+  if(raf) cancelAnimationFrame(raf);
+  raf=null;
 
-      const v=$("scanVideo");
-      try{ v.pause(); }catch(e){}
-      try{ v.srcObject=null; }catch(e){}
+  const v=$("scanVideo");
+  try{ v.pause(); }catch(e){}
+  try{ v.srcObject=null; }catch(e){}
 
-      if(scanStream){
-        try{ scanStream.getTracks().forEach(t=>t.stop()); }catch(e){}
-      }
-      scanStream=null;
-      setScanStatus("Stopped.");
-    }
+  if(scanStream){
+    try{ scanStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  }
+  scanStream=null;
+  setScanStatus("Stopped.");
+}
 
-    function closeScanner(){
-      stopScanner();
-      closeModal("scannerModal");
-    }
+function closeScanner(){
+  stopScanner();
+  closeModal("scannerModal");
+}
 
-    $("closeScanner").addEventListener("click", closeScanner);
-    $("stopCamBtn").addEventListener("click", closeScanner);
+$("closeScanner").addEventListener("click", closeScanner);
+$("stopCamBtn").addEventListener("click", closeScanner);
 
-    $("switchCamBtn").addEventListener("click", async ()=>{
-      useFront=!useFront;
-      if(scanRunning){
-        stopScanner();
-        await startScanner();
+$("switchCamBtn").addEventListener("click", async ()=>{
+  useFront=!useFront;
+  if(scanRunning){
+    stopScanner();
+    await startScanner();
+  }
+});
+
+async function startScanner(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert("Camera not available on this browser/device.");
+    return;
+  }
+
+  openModal("scannerModal");
+  setScanStatus("Starting camera…");
+
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      audio:false,
+      video:{
+        facingMode: useFront ? "user" : "environment",
+        width: { ideal: 1280 },
+        height:{ ideal: 720 }
       }
     });
+  }catch(e){
+    console.error(e);
+    setScanStatus("Camera permission denied or unavailable.");
+    return;
+  }
 
-    async function startScanner(){
-      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        alert("Camera not available on this browser/device.");
-        return;
-      }
-      openModal("scannerModal");
-      setScanStatus("Starting camera…");
+  const v=$("scanVideo");
+  v.srcObject=scanStream;
+  v.setAttribute("playsinline","true"); // important for iPhone
+  v.muted=true;
 
-      try{
-        scanStream = await navigator.mediaDevices.getUserMedia({
-          audio:false,
-          video:{ facingMode: useFront ? "user" : "environment" }
-        });
-      }catch(e){
-        console.error(e);
-        setScanStatus("Camera permission denied or unavailable.");
-        return;
-      }
+  try{ await v.play(); }catch(e){}
 
-      const v=$("scanVideo");
-      v.srcObject=scanStream;
-      await v.play();
+  // Optional: try native BarcodeDetector for QR if available
+  let detector=null;
+  if("BarcodeDetector" in window){
+    try{
+      detector = new BarcodeDetector({ formats:["qr_code"] });
+    }catch(e){
+      try{ detector = new BarcodeDetector(); }catch(_e){}
+    }
+  }
 
-      if(!("BarcodeDetector" in window)){
-        setScanStatus("BarcodeDetector not supported. Use manual paste.");
-        return;
-      }
+  if(!window.jsQR){
+    setScanStatus("jsQR not loaded. Check CDN internet access.");
+    return;
+  }
 
-      let detector;
-      try{
-        detector = new BarcodeDetector({ formats:["qr_code","code_128","ean_13","ean_8","code_39","code_93","itf","upc_a","upc_e"] });
-      }catch(e){
-        detector = new BarcodeDetector();
-      }
+  const canvas=document.createElement("canvas");
+  const ctx=canvas.getContext("2d", { willReadFrequently:true });
 
-      const canvas=document.createElement("canvas");
-      const ctx=canvas.getContext("2d");
+  scanRunning=true;
+  setScanStatus("Scanning QR…");
 
-      scanRunning=true;
-      setScanStatus("Scanning…");
+  let lastHit="";
+  let lastHitAt=0;
 
-      const tick = async ()=>{
-        if(!scanRunning) return;
-        try{
-          if(v.readyState>=2){
-            canvas.width = v.videoWidth || 1280;
-            canvas.height = v.videoHeight || 720;
-            ctx.drawImage(v,0,0,canvas.width,canvas.height);
+  const onHit = (raw)=>{
+    const now = Date.now();
+    if(!raw) return;
+    // prevent duplicate triggers
+    if(raw===lastHit && (now-lastHitAt)<1200) return;
+    lastHit=raw; lastHitAt=now;
+
+    stopScanner();
+    closeModal("scannerModal");
+
+    $("scanId").value = raw;
+
+    const b = loadAll().find(x=>x.id===raw);
+    if(b) openDetailsModal(b);
+    else showBox($("scanInline"), "Not found", "Scanned QR but booking not found.", "bad");
+  };
+
+  const tick = async ()=>{
+    if(!scanRunning) return;
+
+    try{
+      if(v.readyState>=2 && v.videoWidth && v.videoHeight){
+        canvas.width = v.videoWidth;
+        canvas.height = v.videoHeight;
+        ctx.drawImage(v,0,0,canvas.width,canvas.height);
+
+        // 1) Try native detector (if exists)
+        if(detector){
+          try{
             const bmp = await createImageBitmap(canvas);
             const codes = await detector.detect(bmp);
             if(codes && codes.length){
               const raw = (codes[0].rawValue||"").trim();
-              if(raw){
-                stopScanner();
-                closeModal("scannerModal");
-                $("scanId").value = raw;
-                const b = loadAll().find(x=>x.id===raw);
-                if(b) openDetailsModal(b);
-                else showBox($("scanInline"), "Not found", "Scanned code but booking not found.", "bad");
-                return;
-              }
+              if(raw){ onHit(raw); return; }
             }
-          }
-        }catch(e){}
-        raf=requestAnimationFrame(tick);
-      };
-      raf=requestAnimationFrame(tick);
+          }catch(e){ /* ignore */ }
+        }
+
+        // 2) iPhone-safe: jsQR decode from pixels
+        const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+        const code = jsQR(img.data, img.width, img.height, { inversionAttempts:"attemptBoth" });
+        if(code && code.data){
+          onHit(String(code.data).trim());
+          return;
+        }
+      }
+    }catch(e){
+      // ignore frame errors
     }
 
-    $("openCameraBtn").addEventListener("click", startScanner);
+    raf=requestAnimationFrame(tick);
+  };
+
+  raf=requestAnimationFrame(tick);
+}
+
+$("openCameraBtn").addEventListener("click", startScanner);
 
     /*********************
      * PDF generation (Carrier/Internal/Cancelled)
