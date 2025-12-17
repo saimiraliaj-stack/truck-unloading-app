@@ -5,259 +5,344 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Truck Unloading App</title>
 
-  <!-- Libraries (UMD: works in Edge/Chrome/Firefox + mobile) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.20.2/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-
+  <!-- ====== Fonts / Base ====== -->
   <style>
     :root{
-      --bg0:#071018;
-      --bg1:#0b1622;
-      --card:#0f2234;
-      --card2:#0d1d2d;
+      --bg0:#08111b;
+      --bg1:#0b1a2a;
+      --card:rgba(255,255,255,.06);
+      --card2:rgba(255,255,255,.04);
+      --stroke:rgba(255,255,255,.12);
       --text:#eaf2ff;
-      --muted:#9fb3c8;
-      --line:rgba(255,255,255,.08);
+      --muted:rgba(234,242,255,.68);
       --brand:#2ea8ff;
-      --brand2:#00d4ff;
-      --ok:#24c16a;
-      --warn:#ffb020;
+      --brand2:#37e6d2;
+      --good:#25d366;
       --bad:#ff4d4d;
-      --shadow: 0 18px 60px rgba(0,0,0,.45);
-      --radius: 18px;
-      --radius2: 26px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --warn:#ffcc00;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
     body{
       margin:0;
-      font-family: var(--sans);
       color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       background:
-        radial-gradient(1200px 600px at 18% 12%, rgba(46,168,255,.22), transparent 55%),
-        radial-gradient(900px 520px at 85% 18%, rgba(0,212,255,.16), transparent 56%),
-        radial-gradient(900px 700px at 20% 95%, rgba(36,193,106,.08), transparent 55%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-      overflow-x:hidden;
+        radial-gradient(1200px 600px at 15% 10%, rgba(46,168,255,.28), transparent 55%),
+        radial-gradient(900px 550px at 85% 20%, rgba(55,230,210,.18), transparent 60%),
+        radial-gradient(1000px 700px at 40% 110%, rgba(46,168,255,.12), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      min-height:100vh;
     }
-    .gridlines{
-      position:fixed; inset:0;
-      background-image:
-        linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
-      background-size: 80px 80px;
-      opacity:.12;
-      pointer-events:none;
-      mask-image: radial-gradient(circle at 40% 20%, #000 20%, transparent 70%);
+    .wrap{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
+    .top{
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
+      padding:16px 18px;
+      border:1px solid var(--stroke);
+      border-radius:26px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      box-shadow: 0 30px 120px rgba(0,0,0,.45);
     }
-    .hero{padding: 22px 16px 10px;max-width: 1280px;margin: 0 auto;}
-    .header{
-      display:flex;gap:16px;align-items:center;justify-content:space-between;
-      padding:18px 18px;border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border-radius: var(--radius2);box-shadow: var(--shadow);backdrop-filter: blur(10px);
+    .brand{
+      display:flex; gap:12px; align-items:center;
     }
-    .brandwrap{display:flex; align-items:center; gap:14px}
     .logo{
       width:44px;height:44px;border-radius:14px;
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      background: linear-gradient(135deg, rgba(46,168,255,.9), rgba(55,230,210,.65));
       display:grid;place-items:center;
-      box-shadow: 0 10px 30px rgba(46,168,255,.25);
+      box-shadow: 0 10px 40px rgba(46,168,255,.28);
+      border:1px solid rgba(255,255,255,.16);
     }
-    .logo svg{width:24px;height:24px}
-    h1{font-size:22px; margin:0}
-    .subtitle{color:var(--muted); font-size:13px; margin-top:2px}
-    .topActions{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
-    .pill{
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.04);
-      color: var(--text);
-      padding:8px 12px;border-radius: 999px;font-size:12px;
-      display:flex; align-items:center; gap:8px;user-select:none;
+    .logo svg{filter:drop-shadow(0 8px 18px rgba(0,0,0,.35))}
+    h1{margin:0;font-size:18px;letter-spacing:.3px}
+    .sub{margin-top:2px;color:var(--muted);font-size:12px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .chip{
+      display:flex;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:999px;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,.18);
+      font-size:12px;color:var(--muted);
+      user-select:none;
     }
-    .pill b{font-weight:700}
-    .content{max-width:1280px;margin: 14px auto 42px;padding: 0 16px;}
+    .chip b{color:var(--text)}
     .tabs{
-      display:flex;gap:10px;flex-wrap:wrap;padding:10px;
-      background: rgba(255,255,255,.03);
-      border:1px solid var(--line);
-      border-radius: var(--radius2);
-      box-shadow: var(--shadow);
+      margin-top:16px;
+      display:flex; gap:10px; flex-wrap:wrap;
+      padding:12px;
+      border-radius:22px;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,.18);
     }
-    .tabBtn{
-      padding:10px 14px;border-radius:999px;border:1px solid var(--line);
-      color:var(--text);background: rgba(255,255,255,.02);
-      cursor:pointer;font-weight:600;font-size:13px;
+    .tab{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      border-radius:999px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:800;
       display:flex; align-items:center; gap:8px;
-      transition:.15s transform, .15s background, .15s border;
     }
-    .tabBtn:hover{transform: translateY(-1px); background: rgba(255,255,255,.05)}
-    .tabBtn.active{
+    .tab.active{
       border-color: rgba(46,168,255,.55);
-      background: linear-gradient(135deg, rgba(46,168,255,.22), rgba(0,212,255,.12));
-      box-shadow: 0 10px 30px rgba(46,168,255,.16);
+      background: linear-gradient(135deg, rgba(46,168,255,.28), rgba(55,230,210,.12));
+      box-shadow: 0 12px 45px rgba(46,168,255,.12);
     }
     .panel{
-      margin-top:14px;border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      border-radius: var(--radius2);box-shadow: var(--shadow);overflow:hidden;
+      margin-top:14px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      border-radius:24px;
+      overflow:hidden;
     }
     .panelHeader{
-      padding:14px 16px;border-bottom:1px solid var(--line);
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
     }
-    .panelHeader h2{margin:0; font-size:15px;display:flex; align-items:center; gap:10px;}
+    .panelHeader h2{margin:0;font-size:14px}
     .panelHeader small{color:var(--muted)}
     .panelBody{padding:16px}
-    .grid{display:grid;grid-template-columns: 1.2fr .8fr;gap:14px;}
-    @media (max-width: 980px){.grid{grid-template-columns:1fr}.topActions{justify-content:flex-start}}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.35fr .85fr;
+      gap:14px;
+    }
+    @media(max-width: 980px){ .grid{grid-template-columns:1fr} }
+
     .card{
-      border:1px solid var(--line);
-      background: rgba(10,18,28,.55);
-      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      border-radius:22px;
       padding:14px;
     }
-    .row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
-    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
-    input, select, textarea{
-      width:100%;padding:11px 12px;border-radius: 14px;
-      border:1px solid rgba(255,255,255,.12);outline:none;
-      background: rgba(255,255,255,.04);color: var(--text);font-size:14px;
-    }
-    input:focus, select:focus, textarea:focus{
-      border-color: rgba(46,168,255,.55);box-shadow: 0 0 0 4px rgba(46,168,255,.14);
-    }
-    .col{flex:1; min-width: 220px}
-    .btn{
-      border:none;cursor:pointer;font-weight:700;
-      padding:11px 14px;border-radius: 14px;color:#061019;
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
-      box-shadow: 0 12px 26px rgba(46,168,255,.22);
-      transition: .15s transform, .15s filter;white-space:nowrap;
-    }
-    .btn:hover{transform: translateY(-1px); filter:brightness(1.02)}
-    .btn:active{transform: translateY(0px)}
-    .btn.secondary{
-      color: var(--text);
+    label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}
+    input, select{
+      width:100%;
       background: rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.14);
+      color:var(--text);
+      border-radius:14px;
+      padding:12px 12px;
+      outline:none;
+    }
+    input::placeholder{color:rgba(234,242,255,.42)}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .col{flex:1;min-width:220px}
+    .btn{
+      border:1px solid rgba(46,168,255,.45);
+      background: linear-gradient(135deg, rgba(46,168,255,.9), rgba(46,168,255,.45));
+      color:#06111b;
+      font-weight:900;
+      border-radius:14px;
+      padding:12px 14px;
+      cursor:pointer;
+      box-shadow: 0 10px 35px rgba(46,168,255,.20);
+    }
+    .btn.secondary{
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
       box-shadow:none;
     }
     .btn.danger{
-      color:white;
-      background: linear-gradient(135deg, rgba(255,77,77,.95), rgba(255,128,128,.7));
-      box-shadow: 0 12px 26px rgba(255,77,77,.18);
+      border:1px solid rgba(255,77,77,.45);
+      background: linear-gradient(135deg, rgba(255,77,77,.95), rgba(255,77,77,.45));
+      color:#110707;
+      box-shadow: 0 10px 35px rgba(255,77,77,.18);
     }
-    .hint{color:var(--muted); font-size:13px; line-height:1.45}
-    .slots{
+    .btn:disabled{opacity:.45;cursor:not-allowed;filter:saturate(.6)}
+    .slotGrid{
       display:grid;
-      grid-template-columns: repeat(2, minmax(240px, 1fr));
-      gap:12px;margin-top:12px;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap:12px;
+      margin-top:12px;
     }
-    @media (max-width: 620px){ .slots{grid-template-columns:1fr} }
+    @media(max-width: 720px){ .slotGrid{grid-template-columns:1fr} }
     .slot{
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      border-radius: 18px;
-      padding:14px;
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      border-radius:18px;
+      padding:12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
     }
-    .slot .time{font-weight:800; font-size:16px}
-    .slot .meta{color:var(--muted); font-size:12px; margin-top:2px}
+    .slot .t{font-weight:900}
     .badge{
-      padding:5px 10px;border-radius:999px;font-size:12px;
+      font-size:11px;
+      padding:6px 10px;
+      border-radius:999px;
       border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.04);color: var(--text);
+      color:var(--muted);
+      background: rgba(0,0,0,.18);
+      white-space:nowrap;
     }
-    .badge.ok{border-color: rgba(36,193,106,.35); background: rgba(36,193,106,.12)}
-    .badge.busy{border-color: rgba(255,176,32,.35); background: rgba(255,176,32,.12)}
-    .slotActions{display:flex; gap:8px; align-items:center}
-    .slotActions .btn{padding:9px 12px; border-radius: 12px; font-size:13px}
-    .slotActions .btn.secondary{padding:9px 12px}
+    .badge.good{border-color:rgba(37,211,102,.35); color:#c7ffe0}
+    .badge.bad{border-color:rgba(255,77,77,.35); color:#ffd1d1}
+    .badge.warn{border-color:rgba(255,204,0,.35); color:#fff1b0}
+    .hint{color:var(--muted);font-size:12px;line-height:1.45}
     .statusBox{
-      border:1px dashed rgba(255,255,255,.18);
-      border-radius:18px;padding:12px;background: rgba(255,255,255,.03);margin-top:12px;
-    }
-    .statusTitle{font-weight:800; margin:0 0 6px}
-    .statusText{margin:0; color:var(--muted); font-size:13px}
-    .statusSuccess .statusTitle{color: var(--ok)}
-    .statusError .statusTitle{color: var(--bad)}
-    .statusWarn .statusTitle{color: var(--warn)}
-    .mono{
-      font-family: var(--mono);font-size: 12px;
-      background: rgba(0,0,0,.25);
+      margin-top:12px;
+      border-radius:18px;
       border:1px solid rgba(255,255,255,.12);
-      padding:10px;border-radius: 14px;overflow:auto;white-space: nowrap;
+      background: rgba(0,0,0,.18);
+      padding:12px;
+      font-size:13px;
+      line-height:1.35;
     }
-    .twoBtns{display:flex; gap:10px; flex-wrap:wrap}
-    .hr{height:1px; background: var(--line); margin:12px 0}
-    .lock{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
-    .lock input{max-width:220px}
-    .tableWrap{overflow:auto; border-radius: 16px; border:1px solid var(--line); background: rgba(0,0,0,.18)}
-    table{width:100%; border-collapse:collapse; min-width: 860px}
-    th,td{padding:10px 10px; border-bottom:1px solid rgba(255,255,255,.08); font-size:13px}
-    th{color: var(--muted); text-align:left; font-weight:700; background: rgba(255,255,255,.03)}
-    tr:hover td{background: rgba(255,255,255,.02)}
-    .small{font-size:12px; color:var(--muted)}
-    .footerNote{color:var(--muted); font-size:12px; margin-top:10px}
-    .qrPreview{
-      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
-      margin-top:10px;padding:10px;
+    .footerNote{margin-top:10px;color:var(--muted);font-size:12px}
+
+    table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    th{color:var(--muted);font-size:12px;text-align:left;padding:0 10px}
+    td{
+      padding:12px 10px;
+      background: rgba(255,255,255,.04);
+      border-top:1px solid rgba(255,255,255,.08);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    td:first-child{border-left:1px solid rgba(255,255,255,.08);border-radius:14px 0 0 14px}
+    td:last-child{border-right:1px solid rgba(255,255,255,.08);border-radius:0 14px 14px 0}
+    .mono{font-family:var(--mono);font-size:12px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+
+    /* ===== Modals ===== */
+    .modalOverlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.62);
+      display:none;
+      align-items:center; justify-content:center;
+      padding:16px;
+      z-index:9999;
+    }
+    .modal{
+      width:min(960px, 100%);
+      border-radius: 24px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(15,34,52,.98), rgba(10,18,28,.92));
+      box-shadow: 0 30px 120px rgba(0,0,0,.65);
+      overflow:hidden;
+    }
+    .modalHeader{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+    }
+    .modalHeader h3{margin:0;font-size:14px}
+    .iconBtn{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      border-radius: 12px;
+      padding:8px 10px;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .modalBody{padding:16px}
+    .kvGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 720px){ .kvGrid{grid-template-columns:1fr} }
+    .kv{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      background: rgba(255,255,255,.03);
+      padding:12px;
+    }
+    .kv .k{color:var(--muted); font-size:12px; margin-bottom:6px}
+    .kv .v{font-weight:900}
+    .modalFooter{
+      display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;
+      padding:14px 16px;
+      border-top:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.02);
+    }
+
+    /* ===== Scanner ===== */
+    .scannerBox{
+      margin-top:12px;
       border:1px solid rgba(255,255,255,.12);
-      border-radius:16px;background: rgba(255,255,255,.03);
+      border-radius: 18px;
+      background: rgba(0,0,0,.20);
+      overflow:hidden;
     }
-    .qrPreview canvas{
-      width:96px; height:96px;border-radius:12px;
-      background:#fff;padding:8px;
+    .scannerTop{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
     }
-    .qrPreview .hint{margin:0}
+    .scannerVideoWrap{
+      position:relative;
+      aspect-ratio: 16/9;
+      background:#000;
+    }
+    video#scanVideo{width:100%;height:100%;object-fit:cover;display:block}
+    .scanAim{position:absolute; inset:0; display:grid; place-items:center; pointer-events:none}
+    .scanAim::before{
+      content:"";
+      width:min(68%, 420px);
+      height:min(55%, 280px);
+      border:2px solid rgba(46,168,255,.8);
+      border-radius: 16px;
+      box-shadow: 0 0 0 999px rgba(0,0,0,.18);
+    }
   </style>
+
+  <!-- ====== External libs (CDN) ====== -->
+  <!-- jsPDF -->
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <!-- QR Code -->
+  <script defer src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <!-- JsBarcode (CODE128) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <!-- SheetJS for Excel export -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
-  <div class="gridlines"></div>
-
-  <div class="hero">
-    <div class="header">
-      <div class="brandwrap">
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
         <div class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M7 17h10m-9-9h8m-7-3h6M6.5 21h11A2.5 2.5 0 0 0 20 18.5V5.5A2.5 2.5 0 0 0 17.5 3h-11A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21Z" stroke="white" stroke-width="1.7" stroke-linecap="round"/>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <path d="M4 7.5c0-1.38 1.12-2.5 2.5-2.5h7C14.88 5 16 6.12 16 7.5v10c0 1.38-1.12 2.5-2.5 2.5h-7C5.12 20 4 18.88 4 17.5v-10Z" stroke="white" stroke-width="1.8"/>
+            <path d="M16 9h1.3c.56 0 1.1.22 1.5.62l1.6 1.6c.4.4.62.94.62 1.5V17.5c0 1.38-1.12 2.5-2.5 2.5H16" stroke="white" stroke-width="1.8"/>
+            <path d="M7 9h6M7 12h6M7 15h4" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
         </div>
         <div>
           <h1>Truck Unloading App</h1>
-          <div class="subtitle">Carrier booking + cancel • Scan ticket • Internal dashboard (locked)</div>
+          <div class="sub">Carrier booking + cancel • Scan ticket • Internal dashboard (locked)</div>
         </div>
       </div>
 
-      <div class="topActions">
-        <div class="pill">📄 <b>Modern PDF</b></div>
-        <div class="pill">🏷️ <b>Barcode</b> (CODE128)</div>
-        <div class="pill">🔳 <b>QR</b> scan</div>
-        <div class="pill">🧾 <b>Excel</b> export</div>
-        <div class="pill">🛡️ <b>Internal</b> locked (1234)</div>
+      <div class="chips">
+        <div class="chip">📄 <b>Modern PDF</b></div>
+        <div class="chip">🏷️ <b>Barcode</b> CODE128</div>
+        <div class="chip">🔳 <b>QR</b> ticket</div>
+        <div class="chip">📊 <b>Excel</b> export</div>
+        <div class="chip">🔒 <b>Internal</b> (1234)</div>
       </div>
     </div>
-  </div>
 
-  <div class="content">
-    <div class="tabs" role="tablist">
-      <button class="tabBtn active" data-tab="carrierBooking" role="tab">🚚 Carrier booking</button>
-      <button class="tabBtn" data-tab="carrierCancel" role="tab">🧯 Carrier cancel</button>
-      <button class="tabBtn" data-tab="scanTicket" role="tab">🔎 Scan ticket</button>
-      <button class="tabBtn" data-tab="internal" role="tab">🛡️ Internal (locked)</button>
+    <div class="tabs">
+      <button class="tab active" data-tab="carrierBooking">🚚 Carrier booking</button>
+      <button class="tab" data-tab="carrierCancel">🧨 Carrier cancel</button>
+      <button class="tab" data-tab="scanTicket">📷 Scan ticket</button>
+      <button class="tab" data-tab="internal">🛡️ Internal (locked)</button>
     </div>
 
-    <!-- CARRIER BOOKING -->
+    <!-- ===== Carrier Booking ===== -->
     <section class="panel" id="tab_carrierBooking">
       <div class="panelHeader">
-        <h2>🚚 Carrier booking</h2>
-        <small>Date format is local browser date (Europe/Berlin recommended)</small>
+        <h2>Carrier booking</h2>
+        <small>Date is Europe/Berlin</small>
       </div>
       <div class="panelBody">
         <div class="grid">
@@ -270,135 +355,98 @@
               <div class="col">
                 <label>Working hours</label>
                 <select id="hoursSelect">
-                  <option value="08:00-16:00">08:00 – 16:00</option>
-                  <option value="06:00-14:00">06:00 – 14:00</option>
-                  <option value="14:00-22:00">14:00 – 22:00</option>
-                  <option value="07:00-19:00">07:00 – 19:00</option>
+                  <option value="08:00-16:00">08:00–16:00</option>
+                  <option value="06:00-14:00">06:00–14:00</option>
+                  <option value="14:00-22:00">14:00–22:00</option>
                 </select>
               </div>
-              <div class="col" style="min-width:200px">
+              <div class="col" style="min-width:220px">
+                <label>&nbsp;</label>
                 <button class="btn" id="loadSlotsBtn">Load slots</button>
               </div>
             </div>
 
-            <p class="hint" style="margin:10px 0 0">
-              Select an available slot (2 hours). After booking you get a <b>Booking ID</b> and a modern PDF ticket with <b>Barcode + QR</b>.
-              Booking ID format: <b>Carrier-Plate-Package-XXX</b>.
-            </p>
+            <div class="hint" style="margin-top:10px">
+              Select an available slot (2 hours). After booking you get a <b>Booking ID</b> and can download a PDF with <b>Barcode + QR</b>.
+            </div>
 
-            <div class="slots" id="slotsGrid"></div>
-
-            <div class="statusBox" id="bookingStatus" style="display:none"></div>
+            <div class="slotGrid" id="slotGrid"></div>
+            <div class="hint" id="slotHint" style="margin-top:10px"></div>
           </div>
 
           <div class="card">
             <h3 style="margin:0 0 10px">Carrier details</h3>
 
-            <div class="row">
-              <div class="col">
-                <label>Company / Carrier *</label>
-                <input id="carrierCompany" placeholder="e.g. DHL / DSV / DB Schenker" />
-              </div>
-            </div>
-            <div class="row">
-              <div class="col">
-                <label>Truck plate *</label>
-                <input id="carrierPlate" placeholder="e.g. DU-AB 1234" />
-              </div>
-              <div class="col">
-                <label>Driver phone *</label>
-                <input id="carrierPhone" placeholder="e.g. +49..." />
-              </div>
-            </div>
-            <div class="row">
-              <div class="col">
-                <label>Package No *</label>
-                <input id="carrierPackage" placeholder="e.g. PKG-001 / PL-7788" />
-              </div>
-            </div>
+            <label>Company / Carrier *</label>
+            <input id="companyInput" placeholder="e.g. DHL / DB Schenker / ..." />
 
-            <div class="hr"></div>
+            <div style="height:10px"></div>
 
-            <div id="afterBooking" style="display:none">
-              <div class="statusBox statusSuccess">
-                <p class="statusTitle" style="margin:0 0 6px">Booked successfully.</p>
-                <p class="statusText" style="margin:0 0 8px">Booking ID</p>
-                <div class="mono" id="bookingIdBox"></div>
+            <label>Truck plate *</label>
+            <input id="plateInput" placeholder="DU-AB 1234" />
 
-                <div class="qrPreview">
-                  <canvas id="qrCanvasPreview" width="150" height="150"></canvas>
-                  <p class="hint"><b>QR code</b> encodes the Booking ID for quick scan at gate / check-in.</p>
-                </div>
-              </div>
+            <div style="height:10px"></div>
 
-              <div class="twoBtns" style="margin-top:12px">
-                <button class="btn" id="downloadCarrierPdfBtn">Download PDF (Carrier)</button>
-                <button class="btn secondary" id="downloadInternalPdfBtn">Download PDF (Internal)</button>
-                <button class="btn danger" id="downloadCancelledPdfBtn" title="Generate a cancelled ticket">Cancelled PDF</button>
-              </div>
+            <label>Driver phone *</label>
+            <input id="phoneInput" placeholder="+49 ..." />
 
-              <p class="footerNote">
-                Note: On iPhone/iPad Safari, the PDF opens in a new tab (then use Share → Save to Files). On desktop, it downloads directly.
-              </p>
+            <div style="height:10px"></div>
+
+            <label>Package No *</label>
+            <input id="packageInput" placeholder="PKG-001" />
+
+            <div class="statusBox" id="bookingStatus" style="display:none"></div>
+
+            <div style="margin-top:12px" class="row">
+              <button class="btn secondary" id="downloadCarrierPdfBtn" disabled>Download PDF (Carrier)</button>
+              <button class="btn secondary" id="downloadInternalPdfBtn" disabled>Download PDF (Internal)</button>
             </div>
 
+            <div class="footerNote">
+              Booking ID format: <span class="mono">Carrier-Plate-Package-XXX</span> (safe characters)
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- CARRIER CANCEL -->
+    <!-- ===== Carrier Cancel ===== -->
     <section class="panel" id="tab_carrierCancel" style="display:none">
       <div class="panelHeader">
-        <h2>🧯 Carrier cancel</h2>
-        <small>Booking ID is enough (no cancel token)</small>
+        <h2>Carrier cancel</h2>
+        <small>Cancel by Booking ID only</small>
       </div>
       <div class="panelBody">
         <div class="grid">
           <div class="card">
-            <div class="row">
-              <div class="col">
-                <label>Booking ID *</label>
-                <input id="cancelBookingId" placeholder="Carrier-Plate-Package-123" />
-              </div>
-              <div class="col">
-                <label>Confirm by typing: CANCEL</label>
-                <input id="cancelConfirm" placeholder="CANCEL" />
-              </div>
-            </div>
-            <div class="row">
-              <div class="col">
-                <label>Reason (optional)</label>
-                <textarea id="cancelReason" rows="3" placeholder="Traffic, driver issue, rebooked, etc."></textarea>
-              </div>
-            </div>
-            <div class="row">
-              <div class="col" style="min-width:200px">
-                <button class="btn danger" id="cancelBtn">Cancel booking</button>
-              </div>
-              <div class="col">
-                <div class="statusBox" id="cancelStatus" style="display:none"></div>
-              </div>
-            </div>
+            <label>Booking ID *</label>
+            <input id="cancelId" placeholder="Carrier-Plate-Package-123" />
+            <div style="height:10px"></div>
+            <label>Reason *</label>
+            <input id="cancelReason" placeholder="e.g. Delay / wrong slot / ..."/>
+            <div style="height:14px"></div>
+            <button class="btn danger" id="cancelBtn">Cancel booking</button>
+
+            <div class="statusBox" id="cancelStatus" style="display:none"></div>
           </div>
 
           <div class="card">
-            <h3 style="margin:0 0 10px">How cancel works</h3>
-            <p class="hint" style="margin:0">
-              • Cancelling marks the booking as <b>cancelled</b> but keeps the record for tracking.<br>
-              • Slots become available again after cancellation.<br>
-              • Cancelled PDF includes a big red overlay.
-            </p>
+            <h3 style="margin:0 0 10px">Rules</h3>
+            <div class="hint">
+              • Cancel marks the booking as <b>CANCELLED</b>.<br>
+              • Cancelled bookings get a PDF with a big red X.<br>
+              • Cancel does not delete; it keeps history.
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- SCAN TICKET -->
+    <!-- ===== Scan Ticket ===== -->
     <section class="panel" id="tab_scanTicket" style="display:none">
       <div class="panelHeader">
-        <h2>🔎 Scan ticket</h2>
-        <small>Paste Booking ID (from barcode or QR) to see status quickly</small>
+        <h2>Scan ticket</h2>
+        <small>Use camera to scan QR/Barcode or paste Booking ID</small>
       </div>
       <div class="panelBody">
         <div class="grid">
@@ -406,571 +454,965 @@
             <div class="row">
               <div class="col">
                 <label>Booking ID</label>
-                <input id="scanBookingId" placeholder="Carrier-Plate-Package-123" />
+                <input id="scanId" placeholder="Carrier-Plate-Package-123" />
               </div>
               <div class="col" style="min-width:220px">
-                <button class="btn" id="scanBtn">Find booking</button>
+                <label>&nbsp;</label>
+                <button class="btn" id="findBtn">Find booking</button>
               </div>
             </div>
-            <div class="statusBox" id="scanResult" style="display:none"></div>
+
+            <div class="row" style="margin-top:12px">
+              <button class="btn" id="openCameraBtn">Open camera scanner</button>
+              <button class="btn secondary" id="focusScanBtn" title="For handheld scanners that type into the field">Use handheld scanner</button>
+            </div>
+
+            <div class="statusBox" id="scanInline" style="display:none"></div>
+
+            <div class="footerNote">
+              Camera scanning works best on <b>Edge / Chrome</b>. If not available, paste the Booking ID manually.
+            </div>
           </div>
 
           <div class="card">
-            <h3 style="margin:0 0 10px">Tip</h3>
-            <p class="hint" style="margin:0">
-              The <b>barcode + QR</b> both encode the Booking ID. A scanner reads it and you paste it here.
-            </p>
+            <h3 style="margin:0 0 10px">Flow</h3>
+            <div class="hint">
+              • Scan → popup shows all details.<br>
+              • Click <b>ARRIVED</b> when truck is at gate.<br>
+              • Click <b>DONE</b> when unloading is finished.<br>
+              • If not marked done: it becomes <b>DONE (AUTO)</b> after slot end.
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- INTERNAL -->
+    <!-- ===== Internal Locked ===== -->
     <section class="panel" id="tab_internal" style="display:none">
       <div class="panelHeader">
-        <h2>🛡️ Internal dashboard</h2>
-        <small>Protected view (passcode required)</small>
+        <h2>Internal dashboard</h2>
+        <small>Protected view</small>
       </div>
       <div class="panelBody">
-        <div class="card" id="internalLockCard">
-          <div class="lock">
-            <div>
-              <label>Enter passcode</label>
-              <input id="internalPass" type="password" placeholder="1234" />
+        <div class="card" id="lockBox">
+          <div class="row">
+            <div class="col">
+              <label>Passcode</label>
+              <input id="passInput" type="password" placeholder="Enter passcode" />
             </div>
-            <button class="btn" id="unlockBtn">Unlock</button>
-            <button class="btn secondary" id="lockBtn" style="display:none">Lock</button>
-            <span class="small" id="lockHint">Default passcode: <b>1234</b></span>
+            <div class="col" style="min-width:220px">
+              <label>&nbsp;</label>
+              <button class="btn" id="unlockBtn">Unlock</button>
+            </div>
           </div>
+          <div class="footerNote">For now: <b>1234</b></div>
           <div class="statusBox" id="lockStatus" style="display:none"></div>
         </div>
 
-        <div id="internalArea" style="display:none">
-          <div class="grid">
-            <div class="card">
-              <div class="row">
-                <div class="col">
-                  <label>Date</label>
-                  <input id="internalDate" type="date" />
-                </div>
-                <div class="col">
-                  <label>Working hours</label>
-                  <select id="internalHours">
-                    <option value="08:00-16:00">08:00 – 16:00</option>
-                    <option value="06:00-14:00">06:00 – 14:00</option>
-                    <option value="14:00-22:00">14:00 – 22:00</option>
-                    <option value="07:00-19:00">07:00 – 19:00</option>
-                  </select>
-                </div>
-                <div class="col" style="min-width:220px">
-                  <button class="btn" id="refreshInternalBtn">Refresh</button>
-                </div>
-              </div>
-
-              <div class="row" style="margin-top:12px">
-                <button class="btn secondary" id="exportExcelBtn">Export to Excel</button>
-                <button class="btn secondary" id="clearAllBtn" title="Clears all stored bookings">Clear ALL data</button>
-              </div>
-
-              <p class="hint" style="margin:12px 0 0">
-                This internal table includes operational data (who, when, phone, package, status). Use Excel export for reporting.
-              </p>
+        <div class="card" id="internalBox" style="display:none">
+          <div class="row" style="align-items:center;justify-content:space-between">
+            <div>
+              <h3 style="margin:0 0 6px">Bookings</h3>
+              <div class="hint">Shows status, arrived/done timestamps, cancel reasons, and auto-completions.</div>
             </div>
-
-            <div class="card">
-              <h3 style="margin:0 0 10px">Internal checklist</h3>
-              <p class="hint" style="margin:0">
-                • Confirm slot occupancy<br>
-                • Check driver phone + package no<br>
-                • See cancelled bookings instantly<br>
-                • Print internal ticket only when needed
-              </p>
+            <div class="actions">
+              <button class="btn secondary" id="exportExcelBtn">Excel export</button>
+              <button class="btn secondary" id="refreshBtn">Refresh</button>
             </div>
           </div>
 
-          <div class="card" style="margin-top:14px">
-            <div class="tableWrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Booking ID</th>
-                    <th>Company</th>
-                    <th>Plate</th>
-                    <th>Driver phone</th>
-                    <th>Package No</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="internalTableBody"></tbody>
-              </table>
-            </div>
-            <div class="small" style="margin-top:8px">
-              Actions: Carrier PDF, Internal PDF, Cancelled PDF, Cancel booking.
-            </div>
+          <div style="height:12px"></div>
+
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Slot</th>
+                  <th>Status</th>
+                  <th>Company</th>
+                  <th>Plate</th>
+                  <th>Package</th>
+                  <th class="mono">Booking ID</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="internalTbody"></tbody>
+            </table>
           </div>
         </div>
       </div>
     </section>
-
   </div>
 
-<script>
-const STORAGE_KEY = "truck_unloading_bookings_v2";
-const INTERNAL_PASS = "1234";
+  <!-- ===== Details Modal ===== -->
+  <div class="modalOverlay" id="detailsModal">
+    <div class="modal">
+      <div class="modalHeader">
+        <h3>Shipment details</h3>
+        <button class="iconBtn" id="closeDetails">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="kvGrid">
+          <div class="kv"><div class="k">Status</div><div class="v" id="m_status">—</div></div>
+          <div class="kv"><div class="k">Booking ID</div><div class="v mono" id="m_id">—</div></div>
+          <div class="kv"><div class="k">Date</div><div class="v" id="m_date">—</div></div>
+          <div class="kv"><div class="k">Slot</div><div class="v" id="m_slot">—</div></div>
+          <div class="kv"><div class="k">Company</div><div class="v" id="m_company">—</div></div>
+          <div class="kv"><div class="k">Truck plate</div><div class="v" id="m_plate">—</div></div>
+          <div class="kv"><div class="k">Driver phone</div><div class="v" id="m_phone">—</div></div>
+          <div class="kv"><div class="k">Package No</div><div class="v" id="m_pkg">—</div></div>
+          <div class="kv" id="m_autoWrap" style="display:none"><div class="k">Completion</div><div class="v">Completed automatically (slot ended)</div></div>
+          <div class="kv" id="m_cancelWrap" style="display:none"><div class="k">Cancel reason</div><div class="v" id="m_cancelReason">—</div></div>
+          <div class="kv" id="m_arrivedWrap" style="display:none"><div class="k">Arrived at</div><div class="v" id="m_arrivedAt">—</div></div>
+          <div class="kv" id="m_doneWrap" style="display:none"><div class="k">Done at</div><div class="v" id="m_doneAt">—</div></div>
+        </div>
+      </div>
+      <div class="modalFooter">
+        <button class="btn secondary" id="m_pdfCarrier">Carrier PDF</button>
+        <button class="btn secondary" id="m_pdfInternal">Internal PDF</button>
+        <button class="btn danger" id="m_pdfCancelled">Cancelled PDF</button>
+        <span style="flex:1"></span>
+        <button class="btn" id="m_arrived">Mark ARRIVED</button>
+        <button class="btn" id="m_done">Mark DONE</button>
+      </div>
+    </div>
+  </div>
 
-function $(id){ return document.getElementById(id); }
-function pad2(n){ return String(n).padStart(2,"0"); }
-function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-function safeText(v){ return (v===undefined||v===null) ? "" : String(v); }
-function cleanPart(s){ return safeText(s).trim().replace(/\s+/g,"-").replace(/[^\w\-]/g,"").slice(0,60) || "NA"; }
-function loadAll(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"); }catch(e){ return []; } }
-function saveAll(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
-function isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1); }
-function openPreDownloadTabIfNeeded(){ if(!isIOS()) return null; const w=window.open("","_blank"); return w||null; }
-function downloadBlobCrossPlatform(blob, filename, preOpenedWindow=null){
-  const url = URL.createObjectURL(blob);
-  if (isIOS()){
-    if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.location.href=url;
-    else window.location.href=url;
-    setTimeout(()=>URL.revokeObjectURL(url), 60000);
-    return;
-  }
-  const a=document.createElement("a");
-  a.href=url; a.download=filename; a.rel="noopener";
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{URL.revokeObjectURL(url); document.body.removeChild(a);}, 250);
-}
-function statusBox(el, type, title, text){
-  el.style.display="block";
-  el.className="statusBox " + (type?("status"+type):"");
-  el.innerHTML = `<p class="statusTitle">${safeText(title)}</p><p class="statusText">${safeText(text)}</p>`;
-}
-function parseHours(hours){ const [s,e]=hours.split("-"); return {start:s,end:e}; }
-function addMinutes(hhmm, minutes){
-  const [h,m]=hhmm.split(":").map(Number);
-  const d=new Date(2000,0,1,h,m,0,0);
-  d.setMinutes(d.getMinutes()+minutes);
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-function cmpTime(a,b){ return a.localeCompare(b); }
-function buildSlots(hours){
-  const {start,end}=parseHours(hours);
-  const slots=[]; let t=start;
-  while (cmpTime(addMinutes(t,120), end) <= 0){
-    const t2=addMinutes(t,120);
-    slots.push({start:t,end:t2}); t=t2;
-  }
-  return slots;
-}
-function nextSequenceForDate(dateISO){
-  const all=loadAll().filter(b=>b.date===dateISO);
-  let max=0;
-  for (const b of all){
-    const tail=(b.id||"").split("-").pop();
-    const n=parseInt(tail,10);
-    if(!isNaN(n)) max=Math.max(max,n);
-  }
-  return max+1;
-}
-function makeBookingId(company, plate, pkg, seq){
-  return `${cleanPart(company)}-${cleanPart(plate)}-${cleanPart(pkg)}-${seq}`;
-}
-function makeBarcodeDataURL(text){
-  const canvas=document.createElement("canvas");
-  JsBarcode(canvas, safeText(text), {format:"CODE128",width:2,height:56,displayValue:false,margin:0});
-  return canvas.toDataURL("image/png");
-}
-function makeQrDataURL(text, size=200){
-  const qr=new QRious({value:safeText(text), size:size, level:"H"});
-  return qr.toDataURL("image/png");
-}
-function renderQrPreview(bookingId){
-  try{
-    const canvas=$("qrCanvasPreview");
-    if(!canvas) return;
-    new QRious({element:canvas, value:safeText(bookingId), size:150, level:"H"});
-  }catch(e){ console.warn("QR preview failed:", e); }
-}
-function addTicketHeader(doc, title, sub){
-  doc.setFillColor(11, 33, 52);
-  doc.rect(0, 0, 210, 34, "F");
-  doc.setFillColor(46, 168, 255);
-  doc.rect(0, 34, 210, 2, "F");
-  doc.setTextColor(255,255,255);
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(18);
-  doc.text(title, 16, 20);
-  doc.setFont("helvetica","normal");
-  doc.setFontSize(10.5);
-  doc.setTextColor(210,225,255);
-  doc.text(sub, 16, 28);
-  doc.setTextColor(10,18,28);
-}
-function addWatermarkCancelled(doc){
-  try{
-    if (doc.saveGraphicsState) doc.saveGraphicsState();
-    doc.setTextColor(255, 70, 70);
-    doc.setFont("helvetica","bold");
-    doc.setFontSize(60);
-    doc.text("CANCELLED", 105, 150, { align:"center", angle: 35 });
-    doc.setLineWidth(3);
-    doc.setDrawColor(255,70,70);
-    doc.line(30, 210, 180, 70);
-    if (doc.restoreGraphicsState) doc.restoreGraphicsState();
-    doc.setTextColor(10,18,28);
-  }catch(e){}
-}
-function addKeyValueBox(doc, x, y, w, lines){
-  doc.setDrawColor(230);
-  doc.setFillColor(250);
-  doc.roundedRect(x, y, w, lines.length*8 + 10, 4, 4, "FD");
-  doc.setFont("helvetica","normal");
-  doc.setFontSize(11);
-  let yy=y+10;
-  for (const [k,v] of lines){
-    doc.setTextColor(90); doc.text(`${k}:`, x+8, yy);
-    doc.setTextColor(10); doc.text(safeText(v), x+55, yy);
-    yy += 8;
-  }
-}
-async function generatePdf(booking, mode, preOpenedWindow=null){
-  try{
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit:"mm", format:"a4" });
-    const isInternal = (mode === "internal");
-    const statusTag = booking.cancelled ? "CANCELLED" : "ACTIVE";
-    const modeTag = isInternal ? "INTERNAL" : "CARRIER";
-    addTicketHeader(doc, "Truck Unloading Ticket", `${modeTag} • ${statusTag} • ${booking.date} • ${booking.start}-${booking.end}`);
-    doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text("Booking ID", 16, 50);
-    doc.setFont("courier","bold"); doc.setFontSize(12);
-    doc.setFillColor(245); doc.setDrawColor(230);
-    doc.roundedRect(16, 54, 178, 12, 4, 4, "FD");
-    doc.text(safeText(booking.id), 20, 62);
+  <!-- ===== Scanner Modal ===== -->
+  <div class="modalOverlay" id="scannerModal">
+    <div class="modal">
+      <div class="modalHeader">
+        <h3>Camera scanner (QR / Barcode)</h3>
+        <button class="iconBtn" id="closeScanner">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="scannerBox">
+          <div class="scannerTop">
+            <div class="hint" id="scanStatusText">Allow camera access to start scanning…</div>
+            <div class="actions">
+              <button class="btn secondary" id="switchCamBtn">Switch camera</button>
+              <button class="btn danger" id="stopCamBtn">Stop</button>
+            </div>
+          </div>
+          <div class="scannerVideoWrap">
+            <video id="scanVideo" autoplay playsinline muted></video>
+            <div class="scanAim"></div>
+          </div>
+        </div>
+        <div class="footerNote">Tip: keep code inside the frame. If it fails, paste Booking ID manually.</div>
+      </div>
+    </div>
+  </div>
 
-    const barcodeURL = makeBarcodeDataURL(booking.id);
-    const qrURL = makeQrDataURL(booking.id, 220);
-    doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(70);
-    doc.text("Barcode", 16, 74);
-    doc.addImage(barcodeURL, "PNG", 16, 76, 120, 18);
-    doc.text("QR", 160, 74);
-    doc.addImage(qrURL, "PNG", 160, 76, 34, 34);
-    doc.setTextColor(10);
+  <script>
+    /*********************
+     * Safe helpers
+     *********************/
+    const $ = (id)=>document.getElementById(id);
 
-    addKeyValueBox(doc, 16, 115, 178, [
-      ["Date", booking.date],
-      ["Time", `${booking.start} - ${booking.end}`],
-      ["Company", booking.company],
-      ["Truck plate", booking.plate],
-      ["Driver phone", booking.phone],
-      ["Package No", booking.packageNo],
-    ]);
-
-    if (isInternal){
-      doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.text("Internal operational notes", 16, 178);
-      doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(70);
-      doc.text("• Check unloading bay readiness", 18, 188);
-      doc.text("• Verify package & documents", 18, 195);
-      doc.text("• Contact driver if delays", 18, 202);
-      doc.setTextColor(10); doc.setFontSize(9);
-      doc.text("Internal view contains sensitive info. Do not share externally.", 16, 212);
-    } else {
-      doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(70);
-      doc.text("Please arrive 10 minutes early. Present this ticket at gate/check-in.", 16, 186);
-      doc.text("If you cannot make the slot, cancel using Booking ID on the cancel tab.", 16, 193);
-      doc.setTextColor(10);
+    function pad2(n){ return String(n).padStart(2,"0"); }
+    function todayISO(){
+      const d = new Date();
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    }
+    function cleanPart(s){
+      return String(s||"")
+        .trim()
+        .replace(/\s+/g,"-")
+        .replace(/[^a-zA-Z0-9\-_.]/g,"")
+        .slice(0,60) || "X";
+    }
+    function showBox(el, title, body, tone=""){
+      el.style.display="block";
+      el.innerHTML = `<b>${title}</b><div style="margin-top:6px; color: var(--muted)">${body}</div>`;
+      el.style.borderColor = tone==="bad" ? "rgba(255,77,77,.45)" : tone==="good" ? "rgba(37,211,102,.35)" : "rgba(255,255,255,.12)";
     }
 
-    if (booking.cancelled) addWatermarkCancelled(doc);
+    /*********************
+     * Storage
+     *********************/
+    const STORAGE_KEY="truck_unloading_bookings_v3";
+    function loadAll(){
+      try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"); }
+      catch(e){ return []; }
+    }
+    function saveAll(arr){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+    }
+    function updateBooking(id, patch){
+      const all = loadAll();
+      const idx = all.findIndex(b=>b.id===id);
+      if(idx<0) return null;
+      all[idx] = {...all[idx], ...patch};
+      saveAll(all);
+      return all[idx];
+    }
 
-    const safeId = cleanPart(booking.id);
-    const fileName = `UNLOADING_${modeTag}_${statusTag}_${booking.date}_${booking.start.replace(":","")}_${safeId}.pdf`;
+    /*********************
+     * Status logic
+     *********************/
+    function statusLabel(b){
+      if(b.cancelled) return "CANCELLED";
+      if(b.doneAt) return b.completedAutomatically ? "DONE (AUTO)" : "DONE";
+      if(b.arrivedAt) return "ARRIVED";
+      return "ACTIVE";
+    }
+    function slotEndDate(b){
+      const [yy,mm,dd]=b.date.split("-").map(Number);
+      const [hh,mi]=String(b.end||"00:00").split(":").map(Number);
+      return new Date(yy,mm-1,dd,hh,mi,0,0);
+    }
+    function autoCompleteIfNeeded(){
+      const now = new Date();
+      const all = loadAll();
+      let changed=false;
+      for(const b of all){
+        if(b.cancelled) continue;
+        if(b.doneAt) continue;
+        if(now > slotEndDate(b)){
+          b.doneAt = new Date().toISOString();
+          b.completedAutomatically = true;
+          changed=true;
+        }
+      }
+      if(changed) saveAll(all);
+      return changed;
+    }
 
-    if (!isIOS()){ doc.save(fileName); return; }
-    const pdfBlob = doc.output("blob");
-    downloadBlobCrossPlatform(pdfBlob, fileName, preOpenedWindow);
-  }catch(err){
-    console.error("PDF ERROR:", err);
-    alert("PDF generation failed.\nOpen DevTools (F12) → Console and copy the red error here.");
-    if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
-  }
-}
+    /*********************
+     * Tabs
+     *********************/
+    const tabBtns = [...document.querySelectorAll(".tab")];
+    const tabIds = ["carrierBooking","carrierCancel","scanTicket","internal"];
+    function openTab(name){
+      tabBtns.forEach(b=>b.classList.toggle("active", b.dataset.tab===name));
+      tabIds.forEach(t=>{
+        $("tab_"+t).style.display = (t===name) ? "block" : "none";
+      });
+      if(name==="internal") refreshInternal();
+    }
+    tabBtns.forEach(b=>b.addEventListener("click", ()=>openTab(b.dataset.tab)));
 
-// Tabs
-const tabBtns = document.querySelectorAll(".tabBtn");
-tabBtns.forEach(b=>{
-  b.addEventListener("click", ()=>{
-    tabBtns.forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
-    const tab=b.dataset.tab;
-    ["carrierBooking","carrierCancel","scanTicket","internal"].forEach(t=>{
-      $("tab_"+t).style.display = (t===tab) ? "block" : "none";
-    });
-  });
-});
+    /*********************
+     * Slots (2h)
+     *********************/
+    function buildSlots(hoursStr){
+      const [start,end] = hoursStr.split("-");
+      const [sh,sm]=start.split(":").map(Number);
+      const [eh,em]=end.split(":").map(Number);
+      const slots=[];
+      let cur = sh*60+sm;
+      const endm = eh*60+em;
+      while(cur+120<=endm){
+        const s = `${pad2(Math.floor(cur/60))}:${pad2(cur%60)}`;
+        const e = `${pad2(Math.floor((cur+120)/60))}:${pad2((cur+120)%60)}`;
+        slots.push({start:s,end:e});
+        cur += 120;
+      }
+      return slots;
+    }
 
-let lastBooking=null;
-let currentSlots=[];
+    function renderSlots(){
+      autoCompleteIfNeeded();
+      const date = $("dateInput").value;
+      const slots = buildSlots($("hoursSelect").value);
+      const all = loadAll();
+      const grid = $("slotGrid");
+      grid.innerHTML="";
 
-function setDefaultDates(){
-  $("dateInput").value=todayISO();
-  $("internalDate").value=todayISO();
-}
-setDefaultDates();
+      let bookedCount=0;
+      for(const s of slots){
+        const exists = all.find(b=>b.date===date && b.start===s.start && !b.cancelled);
+        const div = document.createElement("div");
+        div.className="slot";
+        const left = document.createElement("div");
+        left.innerHTML = `<div class="t">${s.start} – ${s.end}</div><div class="hint">2h slot</div>`;
+        const right = document.createElement("div");
+        const badge = document.createElement("span");
+        if(exists){
+          bookedCount++;
+          badge.className="badge bad";
+          badge.textContent = statusLabel(exists)==="DONE" || statusLabel(exists)==="DONE (AUTO)" ? "Completed" : "Booked";
+          right.appendChild(badge);
+          const btn = document.createElement("button");
+          btn.className="btn secondary";
+          btn.textContent="Book";
+          btn.disabled=true;
+          right.appendChild(btn);
+        }else{
+          badge.className="badge good";
+          badge.textContent="Free";
+          right.appendChild(badge);
+          const btn = document.createElement("button");
+          btn.className="btn";
+          btn.textContent="Book";
+          btn.addEventListener("click", ()=>bookSlot(date, s.start, s.end));
+          right.appendChild(btn);
+        }
+        div.appendChild(left);
+        div.appendChild(right);
+        grid.appendChild(div);
+      }
 
-function validateCarrierForm(){
-  const company=$("carrierCompany").value.trim();
-  const plate=$("carrierPlate").value.trim();
-  const phone=$("carrierPhone").value.trim();
-  const pkg=$("carrierPackage").value.trim();
-  if(!company||!plate||!phone||!pkg) return {ok:false,msg:"Company, Truck plate, Driver phone and Package No are mandatory."};
-  return {ok:true, company, plate, phone, pkg};
-}
-function isSlotBooked(dateISO, start, end){
-  const all=loadAll();
-  return all.some(b=>b.date===dateISO && b.start===start && b.end===end && !b.cancelled);
-}
-function renderSlots(){
-  const grid=$("slotsGrid"); grid.innerHTML="";
-  const dateISO=$("dateInput").value;
-  currentSlots.forEach(s=>{
-    const booked=isSlotBooked(dateISO, s.start, s.end);
-    const el=document.createElement("div");
-    el.className="slot";
-    el.innerHTML=`
-      <div>
-        <div class="time">${s.start} – ${s.end}</div>
-        <div class="meta">${booked ? "Booked" : "Available"}</div>
-      </div>
-      <div class="slotActions">
-        <span class="badge ${booked ? "busy" : "ok"}">${booked ? "Busy" : "Free"}</span>
-        <button class="btn ${booked ? "secondary" : ""}" ${booked ? "disabled" : ""}>Book</button>
-      </div>
-    `;
-    const btn=el.querySelector("button");
-    btn.addEventListener("click", ()=>{
-      if(booked) return;
-      const v=validateCarrierForm();
-      if(!v.ok){ statusBox($("bookingStatus"), "Error", "Missing data", v.msg); return; }
-      const seq=nextSequenceForDate(dateISO);
-      const id=makeBookingId(v.company, v.plate, v.pkg, seq);
-      const booking={
-        id, date:dateISO, start:s.start, end:s.end,
-        company:v.company, plate:v.plate, phone:v.phone, packageNo:v.pkg,
-        cancelled:false, cancelReason:"", createdAt:new Date().toISOString()
+      $("slotHint").textContent = bookedCount ? `Booked: ${bookedCount} slot(s).` : `No bookings yet for this date.`;
+    }
+
+    /*********************
+     * Booking create
+     *********************/
+    let lastBookingId=null;
+
+    function bookSlot(date, start, end){
+      const company = $("companyInput").value.trim();
+      const plate = $("plateInput").value.trim();
+      const phone = $("phoneInput").value.trim();
+      const packageNo = $("packageInput").value.trim();
+
+      if(!company || !plate || !phone || !packageNo){
+        showBox($("bookingStatus"), "Missing fields", "Company, plate, phone and package number are mandatory.", "bad");
+        return;
+      }
+
+      autoCompleteIfNeeded();
+      const all=loadAll();
+      const exists = all.find(b=>b.date===date && b.start===start && !b.cancelled);
+      if(exists){
+        showBox($("bookingStatus"), "Slot not available", "This slot is already booked.", "bad");
+        renderSlots();
+        return;
+      }
+
+      const safeCompany = cleanPart(company);
+      const safePlate = cleanPart(plate);
+      const safePkg = cleanPart(packageNo);
+      const rand = Math.floor(100 + Math.random()*900);
+      const id = `${safeCompany}-${safePlate}-${safePkg}-${rand}`;
+
+      const booking = {
+        id,
+        date,
+        start,
+        end,
+        company,
+        plate,
+        phone,
+        packageNo,
+        cancelled:false,
+        cancelReason:"",
+        createdAt:new Date().toISOString(),
+        arrivedAt:"",
+        doneAt:"",
+        completedAutomatically:false
       };
-      const all=loadAll(); all.push(booking); saveAll(all);
-      lastBooking=booking;
-      $("afterBooking").style.display="block";
-      $("bookingIdBox").textContent=booking.id;
-      renderQrPreview(booking.id);
-      statusBox($("bookingStatus"), "Success", "Booked", `Slot ${s.start}-${s.end} reserved for ${booking.company}.`);
+
+      all.push(booking);
+      saveAll(all);
+
+      lastBookingId = id;
+      $("downloadCarrierPdfBtn").disabled=false;
+      $("downloadInternalPdfBtn").disabled=false;
+
+      showBox($("bookingStatus"), "Booked successfully", `Booking ID: <span class="mono">${id}</span>`, "good");
+      renderSlots();
+      refreshInternal();
+    }
+
+    $("loadSlotsBtn").addEventListener("click", renderSlots);
+
+    /*********************
+     * Cancel
+     *********************/
+    $("cancelBtna");
+    $("cancelBtn").addEventListener("click", ()=>{
+      const id = $("cancelId").value.trim();
+      const reason = $("cancelReason").value.trim();
+      if(!id || !reason){
+        showBox($("cancelStatus"), "Missing", "Booking ID and reason are required.", "bad");
+        return;
+      }
+      const all=loadAll();
+      const b = all.find(x=>x.id===id);
+      if(!b){
+        showBox($("cancelStatus"), "Not found", "No booking found with this ID.", "bad");
+        return;
+      }
+      if(b.cancelled){
+        showBox($("cancelStatus"), "Already cancelled", "This booking is already cancelled.", "warn");
+        return;
+      }
+      b.cancelled=true;
+      b.cancelReason=reason;
+      saveAll(all);
+      showBox($("cancelStatus"), "Cancelled", "Booking marked as CANCELLED.", "good");
       renderSlots();
       refreshInternal();
     });
-    grid.appendChild(el);
-  });
-}
-$("loadSlotsBtn").addEventListener("click", ()=>{
-  currentSlots=buildSlots($("hoursSelect").value);
-  renderSlots();
-  $("afterBooking").style.display = lastBooking ? "block" : "none";
-  if (lastBooking) renderQrPreview(lastBooking.id);
-});
 
-$("downloadCarrierPdfBtn").addEventListener("click", async ()=>{
-  if(!lastBooking) return alert("No recent booking. Book a slot first.");
-  const w=openPreDownloadTabIfNeeded();
-  await generatePdf(lastBooking, "carrier", w);
-});
-$("downloadInternalPdfBtn").addEventListener("click", async ()=>{
-  if(!lastBooking) return alert("No recent booking. Book a slot first.");
-  const w=openPreDownloadTabIfNeeded();
-  await generatePdf(lastBooking, "internal", w);
-});
-$("downloadCancelledPdfBtn").addEventListener("click", async ()=>{
-  if(!lastBooking) return alert("No recent booking. Book a slot first.");
-  const w=openPreDownloadTabIfNeeded();
-  await generatePdf({...lastBooking, cancelled:true}, "carrier", w);
-});
+    /*********************
+     * Internal lock + table
+     *********************/
+    let internalUnlocked=false;
 
-// Cancel
-$("cancelBtn").addEventListener("click", ()=>{
-  const id=$("cancelBookingId").value.trim();
-  const confirm=$("cancelConfirm").value.trim().toUpperCase();
-  const reason=$("cancelReason").value.trim();
-  if(!id){ statusBox($("cancelStatus"), "Error", "Missing Booking ID", "Please enter the Booking ID."); return; }
-  if(confirm!=="CANCEL"){ statusBox($("cancelStatus"), "Warn", "Confirmation needed", "Type CANCEL to confirm."); return; }
-  const all=loadAll();
-  const idx=all.findIndex(b=>b.id===id);
-  if(idx<0){ statusBox($("cancelStatus"), "Error", "Not found", "This Booking ID does not exist."); return; }
-  if(all[idx].cancelled){ statusBox($("cancelStatus"), "Warn", "Already cancelled", "This booking is already cancelled."); return; }
-  all[idx].cancelled=true;
-  all[idx].cancelReason=reason||"Cancelled by carrier";
-  all[idx].cancelledAt=new Date().toISOString();
-  saveAll(all);
-  statusBox($("cancelStatus"), "Success", "Cancelled", "Booking is cancelled and slot is now free.");
-  renderSlots(); refreshInternal();
-  if(lastBooking && lastBooking.id===id) lastBooking.cancelled=true;
-});
-
-// Scan
-$("scanBtn").addEventListener("click", ()=>{
-  const id=$("scanBookingId").value.trim();
-  if(!id){ statusBox($("scanResult"), "Error", "Missing", "Paste or type a Booking ID."); return; }
-  const all=loadAll();
-  const b=all.find(x=>x.id===id);
-  if(!b){ statusBox($("scanResult"), "Error", "Not found", "No booking found with this ID."); return; }
-  const state=b.cancelled ? "CANCELLED" : "ACTIVE";
-  const msg =
-    `Company: ${b.company}\n`+
-    `Slot: ${b.date} ${b.start}-${b.end}\n`+
-    `Plate: ${b.plate}\n`+
-    `Phone: ${b.phone}\n`+
-    `Package: ${b.packageNo}\n`+
-    (b.cancelled ? `Reason: ${b.cancelReason||""}` : "");
-  const box=$("scanResult");
-  box.style.display="block";
-  box.className="statusBox " + (b.cancelled ? "statusWarn" : "statusSuccess");
-  box.innerHTML = `
-    <p class="statusTitle">${state}</p>
-    <pre class="mono" style="white-space:pre-wrap">${safeText(msg)}</pre>
-    <div class="twoBtns" style="margin-top:10px">
-      <button class="btn secondary" id="scanCarrierPdf">Carrier PDF</button>
-      <button class="btn secondary" id="scanInternalPdf">Internal PDF</button>
-      <button class="btn danger" id="scanCancelledPdf">Cancelled PDF</button>
-    </div>
-  `;
-  $("scanCarrierPdf").addEventListener("click", async ()=>{ const w=openPreDownloadTabIfNeeded(); await generatePdf(b,"carrier",w); });
-  $("scanInternalPdf").addEventListener("click", async ()=>{ const w=openPreDownloadTabIfNeeded(); await generatePdf(b,"internal",w); });
-  $("scanCancelledPdf").addEventListener("click", async ()=>{ const w=openPreDownloadTabIfNeeded(); await generatePdf({...b,cancelled:true},"carrier",w); });
-});
-
-// Internal lock + table
-function setLocked(locked){
-  $("internalArea").style.display = locked ? "none" : "block";
-  $("lockBtn").style.display = locked ? "none" : "inline-block";
-  $("unlockBtn").style.display = locked ? "inline-block" : "none";
-  $("internalPass").value="";
-  $("lockStatus").style.display="none";
-}
-setLocked(true);
-$("unlockBtn").addEventListener("click", ()=>{
-  const p=$("internalPass").value.trim();
-  if(p!==INTERNAL_PASS){ statusBox($("lockStatus"), "Error", "Wrong passcode", "Access denied."); return; }
-  setLocked(false);
-  statusBox($("lockStatus"), "Success", "Unlocked", "Internal dashboard is unlocked.");
-  $("lockBtn").style.display="inline-block";
-  refreshInternal();
-});
-$("lockBtn").addEventListener("click", ()=> setLocked(true));
-$("refreshInternalBtn").addEventListener("click", refreshInternal);
-
-function refreshInternal(){
-  if($("internalArea").style.display==="none") return;
-  const dateISO=$("internalDate").value;
-  const hours=$("internalHours").value;
-  const slots=buildSlots(hours);
-  const all=loadAll().filter(b=>b.date===dateISO);
-  const tbody=$("internalTableBody");
-  tbody.innerHTML="";
-  function bookingForSlot(s){
-    const inSlot=all.filter(b=>b.start===s.start && b.end===s.end);
-    const active=inSlot.find(x=>!x.cancelled);
-    return active || inSlot[0] || null;
-  }
-  for(const s of slots){
-    const b=bookingForSlot(s);
-    const tr=document.createElement("tr");
-    if(!b){
-      tr.innerHTML=`
-        <td>${s.start}–${s.end}</td>
-        <td class="small">—</td><td class="small">—</td><td class="small">—</td><td class="small">—</td><td class="small">—</td>
-        <td><span class="badge ok">FREE</span></td><td class="small">—</td>`;
-      tbody.appendChild(tr);
-      continue;
-    }
-    const st=b.cancelled ? "CANCELLED" : "ACTIVE";
-    const badge=b.cancelled ? "busy" : "ok";
-    tr.innerHTML=`
-      <td>${s.start}–${s.end}</td>
-      <td><span class="mono">${safeText(b.id)}</span></td>
-      <td>${safeText(b.company)}</td>
-      <td>${safeText(b.plate)}</td>
-      <td>${safeText(b.phone)}</td>
-      <td>${safeText(b.packageNo)}</td>
-      <td><span class="badge ${badge}">${st}</span></td>
-      <td>
-        <div class="twoBtns">
-          <button class="btn secondary" data-act="pdfCarrier">Carrier PDF</button>
-          <button class="btn secondary" data-act="pdfInternal">Internal PDF</button>
-          <button class="btn danger" data-act="cancelPdf">Cancelled PDF</button>
-          <button class="btn danger" data-act="cancelBooking">Cancel</button>
-        </div>
-      </td>`;
-    tr.querySelectorAll("button").forEach(btn=>{
-      btn.addEventListener("click", async ()=>{
-        const act=btn.dataset.act;
-        if(act==="pdfCarrier"){ const w=openPreDownloadTabIfNeeded(); await generatePdf(b,"carrier",w); }
-        if(act==="pdfInternal"){ const w=openPreDownloadTabIfNeeded(); await generatePdf(b,"internal",w); }
-        if(act==="cancelPdf"){ const w=openPreDownloadTabIfNeeded(); await generatePdf({...b,cancelled:true},"carrier",w); }
-        if(act==="cancelBooking"){
-          const all2=loadAll();
-          const idx=all2.findIndex(x=>x.id===b.id);
-          if(idx>=0){
-            if(!all2[idx].cancelled){
-              all2[idx].cancelled=true;
-              all2[idx].cancelReason="Cancelled by internal";
-              all2[idx].cancelledAt=new Date().toISOString();
-              saveAll(all2);
-              refreshInternal(); renderSlots();
-              alert("Booking cancelled.");
-            }else alert("Already cancelled.");
-          }
-        }
-      });
+    $("unlockBtn").addEventListener("click", ()=>{
+      const p = $("passInput").value.trim();
+      if(p==="1234"){
+        internalUnlocked=true;
+        $("lockBox").style.display="none";
+        $("internalBox").style.display="block";
+        showBox($("lockStatus"), "Unlocked", "Access granted.", "good");
+        refreshInternal();
+      }else{
+        showBox($("lockStatus"), "Wrong passcode", "Try again.", "bad");
+      }
     });
-    tbody.appendChild(tr);
-  }
-}
 
-$("exportExcelBtn").addEventListener("click", ()=>{
-  const dateISO=$("internalDate").value;
-  const all=loadAll().filter(b=>b.date===dateISO);
-  const rows=all.map(b=>({
-    "Booking ID": b.id,
-    "Date": b.date,
-    "Start": b.start,
-    "End": b.end,
-    "Company": b.company,
-    "Truck plate": b.plate,
-    "Driver phone": b.phone,
-    "Package No": b.packageNo,
-    "Status": b.cancelled ? "CANCELLED" : "ACTIVE",
-    "Cancel reason": b.cancelReason || "",
-    "Created at": b.createdAt || ""
-  }));
-  const ws=XLSX.utils.json_to_sheet(rows.length ? rows : [{"Info":"No data for this date"}]);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Bookings");
-  XLSX.writeFile(wb, `Bookings_${dateISO}.xlsx`);
-});
+    function badgeHtmlForStatus(st){
+      if(st==="CANCELLED") return `<span class="badge bad">CANCELLED</span>`;
+      if(st==="DONE") return `<span class="badge good">DONE</span>`;
+      if(st==="DONE (AUTO)") return `<span class="badge warn">DONE (AUTO)</span>`;
+      if(st==="ARRIVED") return `<span class="badge warn">ARRIVED</span>`;
+      return `<span class="badge good">ACTIVE</span>`;
+    }
 
-$("clearAllBtn").addEventListener("click", ()=>{
-  if(!confirm("This will delete ALL bookings from local storage. Continue?")) return;
-  localStorage.removeItem(STORAGE_KEY);
-  lastBooking=null;
-  $("afterBooking").style.display="none";
-  renderSlots();
-  refreshInternal();
-});
+    function refreshInternal(){
+      autoCompleteIfNeeded();
+      if(!internalUnlocked) return;
+      const tbody = $("internalTbody");
+      const all = loadAll().slice().sort((a,b)=> (b.createdAt||"").localeCompare(a.createdAt||""));
+      tbody.innerHTML="";
 
-// init
-(function init(){
-  currentSlots=buildSlots($("hoursSelect").value);
-  renderSlots();
-})();
-</script>
+      for(const b of all){
+        const tr=document.createElement("tr");
+        const st=statusLabel(b);
+
+        tr.innerHTML = `
+          <td>${b.date}</td>
+          <td>${b.start}–${b.end}</td>
+          <td>${badgeHtmlForStatus(st)}</td>
+          <td>${escapeHtml(b.company||"")}</td>
+          <td>${escapeHtml(b.plate||"")}</td>
+          <td>${escapeHtml(b.packageNo||"")}</td>
+          <td class="mono">${escapeHtml(b.id)}</td>
+          <td>
+            <div class="actions">
+              <button class="btn secondary" data-act="arrived" data-id="${b.id}">Arrived</button>
+              <button class="btn secondary" data-act="done" data-id="${b.id}">Done</button>
+              <button class="btn secondary" data-act="view" data-id="${b.id}">View</button>
+              <button class="btn danger" data-act="cancel" data-id="${b.id}">Cancel</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        const btnArr = tr.querySelector('[data-act="arrived"]');
+        const btnDone = tr.querySelector('[data-act="done"]');
+        if(b.cancelled || b.arrivedAt || b.doneAt) btnArr.disabled=true;
+        if(b.cancelled || b.doneAt) btnDone.disabled=true;
+      }
+
+      tbody.querySelectorAll("button[data-act]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id=btn.dataset.id;
+          const act=btn.dataset.act;
+          const b=loadAll().find(x=>x.id===id);
+          if(!b) return;
+
+          if(act==="view"){ openDetailsModal(b); return; }
+
+          if(act==="arrived"){
+            if(b.cancelled || b.arrivedAt || b.doneAt) return;
+            updateBooking(id,{arrivedAt:new Date().toISOString(), completedAutomatically:false});
+            refreshInternal(); renderSlots();
+            return;
+          }
+          if(act==="done"){
+            if(b.cancelled || b.doneAt) return;
+            updateBooking(id,{doneAt:new Date().toISOString(), completedAutomatically:false});
+            refreshInternal(); renderSlots();
+            return;
+          }
+          if(act==="cancel"){
+            const reason = prompt("Cancel reason?");
+            if(!reason) return;
+            updateBooking(id,{cancelled:true, cancelReason:reason});
+            refreshInternal(); renderSlots();
+            return;
+          }
+        });
+      });
+    }
+
+    $("refreshBtn").addEventListener("click", refreshInternal);
+
+    /*********************
+     * Excel export
+     *********************/
+    $("exportExcelBtn").addEventListener("click", ()=>{
+      autoCompleteIfNeeded();
+      const data = loadAll().map(b=>({
+        Status: statusLabel(b),
+        Date: b.date,
+        Slot: `${b.start}-${b.end}`,
+        Company: b.company,
+        Plate: b.plate,
+        Phone: b.phone,
+        PackageNo: b.packageNo,
+        BookingID: b.id,
+        ArrivedAt: b.arrivedAt ? new Date(b.arrivedAt).toLocaleString() : "",
+        DoneAt: b.doneAt ? new Date(b.doneAt).toLocaleString() : "",
+        CancelReason: b.cancelReason || "",
+        CompletedAutomatically: b.completedAutomatically ? "YES" : "NO"
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Bookings");
+      XLSX.writeFile(wb, "truck_unloading_bookings.xlsx");
+    });
+
+    /*********************
+     * Scan: find + popup
+     *********************/
+    $("findBtn").addEventListener("click", ()=>{
+      const id = $("scanId").value.trim();
+      if(!id){
+        showBox($("scanInline"), "Missing", "Paste Booking ID or scan it.", "bad");
+        return;
+      }
+      const b = loadAll().find(x=>x.id===id);
+      if(!b){
+        showBox($("scanInline"), "Not found", "No booking found with this ID.", "bad");
+        return;
+      }
+      $("scanInline").style.display="none";
+      openDetailsModal(b);
+    });
+
+    $("focusScanBtn").addEventListener("click", ()=>{
+      $("scanId").focus();
+      $("scanId").select();
+    });
+
+    /*********************
+     * Details Modal + actions
+     *********************/
+    let modalBookingId=null;
+
+    function fmtDT(iso){
+      if(!iso) return "—";
+      try{ return new Date(iso).toLocaleString(); }catch(e){ return iso; }
+    }
+
+    function openModal(id){
+      const el=$(id);
+      el.style.display="flex";
+      el.onclick = (e)=>{ if(e.target===el) closeModal(id); };
+      document.addEventListener("keydown", escClose);
+      function escClose(ev){ if(ev.key==="Escape") closeModal(id); }
+      el._esc=escClose;
+    }
+    function closeModal(id){
+      const el=$(id);
+      el.style.display="none";
+      if(el._esc) document.removeEventListener("keydown", el._esc);
+    }
+
+    $("closeDetails").addEventListener("click", ()=>closeModal("detailsModal"));
+
+    function openDetailsModal(b){
+      autoCompleteIfNeeded();
+      const refreshed = loadAll().find(x=>x.id===b.id) || b;
+      modalBookingId = refreshed.id;
+
+      $("m_status").textContent = statusLabel(refreshed);
+      $("m_id").textContent = refreshed.id;
+      $("m_date").textContent = refreshed.date;
+      $("m_slot").textContent = `${refreshed.start}–${refreshed.end}`;
+      $("m_company").textContent = refreshed.company || "—";
+      $("m_plate").textContent = refreshed.plate || "—";
+      $("m_phone").textContent = refreshed.phone || "—";
+      $("m_pkg").textContent = refreshed.packageNo || "—";
+
+      $("m_autoWrap").style.display = refreshed.completedAutomatically ? "block" : "none";
+      $("m_cancelWrap").style.display = refreshed.cancelled ? "block" : "none";
+      $("m_cancelReason").textContent = refreshed.cancelReason || "—";
+
+      $("m_arrivedWrap").style.display = refreshed.arrivedAt ? "block" : "none";
+      $("m_arrivedAt").textContent = fmtDT(refreshed.arrivedAt);
+
+      $("m_doneWrap").style.display = refreshed.doneAt ? "block" : "none";
+      $("m_doneAt").textContent = fmtDT(refreshed.doneAt);
+
+      $("m_arrived").disabled = !!refreshed.cancelled || !!refreshed.arrivedAt || !!refreshed.doneAt;
+      $("m_done").disabled = !!refreshed.cancelled || !!refreshed.doneAt;
+
+      openModal("detailsModal");
+    }
+
+    $("m_arrived").addEventListener("click", ()=>{
+      if(!modalBookingId) return;
+      const b = updateBooking(modalBookingId,{arrivedAt:new Date().toISOString(), completedAutomatically:false});
+      if(b){ openDetailsModal(b); refreshInternal(); renderSlots(); }
+    });
+    $("m_done").addEventListener("click", ()=>{
+      if(!modalBookingId) return;
+      const b = updateBooking(modalBookingId,{doneAt:new Date().toISOString(), completedAutomatically:false});
+      if(b){ openDetailsModal(b); refreshInternal(); renderSlots(); }
+    });
+
+    /*********************
+     * Camera scanner (BarcodeDetector)
+     *********************/
+    let scanStream=null;
+    let scanRunning=false;
+    let useFront=false;
+    let raf=null;
+
+    function setScanStatus(t){ $("scanStatusText").textContent=t; }
+
+    function stopScanner(){
+      scanRunning=false;
+      if(raf) cancelAnimationFrame(raf);
+      raf=null;
+
+      const v=$("scanVideo");
+      try{ v.pause(); }catch(e){}
+      try{ v.srcObject=null; }catch(e){}
+
+      if(scanStream){
+        try{ scanStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+      }
+      scanStream=null;
+      setScanStatus("Stopped.");
+    }
+
+    function closeScanner(){
+      stopScanner();
+      closeModal("scannerModal");
+    }
+
+    $("closeScanner").addEventListener("click", closeScanner);
+    $("stopCamBtn").addEventListener("click", closeScanner);
+
+    $("switchCamBtn").addEventListener("click", async ()=>{
+      useFront=!useFront;
+      if(scanRunning){
+        stopScanner();
+        await startScanner();
+      }
+    });
+
+    async function startScanner(){
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        alert("Camera not available on this browser/device.");
+        return;
+      }
+      openModal("scannerModal");
+      setScanStatus("Starting camera…");
+
+      try{
+        scanStream = await navigator.mediaDevices.getUserMedia({
+          audio:false,
+          video:{ facingMode: useFront ? "user" : "environment" }
+        });
+      }catch(e){
+        console.error(e);
+        setScanStatus("Camera permission denied or unavailable.");
+        return;
+      }
+
+      const v=$("scanVideo");
+      v.srcObject=scanStream;
+      await v.play();
+
+      if(!("BarcodeDetector" in window)){
+        setScanStatus("BarcodeDetector not supported. Use manual paste.");
+        return;
+      }
+
+      let detector;
+      try{
+        detector = new BarcodeDetector({ formats:["qr_code","code_128","ean_13","ean_8","code_39","code_93","itf","upc_a","upc_e"] });
+      }catch(e){
+        detector = new BarcodeDetector();
+      }
+
+      const canvas=document.createElement("canvas");
+      const ctx=canvas.getContext("2d");
+
+      scanRunning=true;
+      setScanStatus("Scanning…");
+
+      const tick = async ()=>{
+        if(!scanRunning) return;
+        try{
+          if(v.readyState>=2){
+            canvas.width = v.videoWidth || 1280;
+            canvas.height = v.videoHeight || 720;
+            ctx.drawImage(v,0,0,canvas.width,canvas.height);
+            const bmp = await createImageBitmap(canvas);
+            const codes = await detector.detect(bmp);
+            if(codes && codes.length){
+              const raw = (codes[0].rawValue||"").trim();
+              if(raw){
+                stopScanner();
+                closeModal("scannerModal");
+                $("scanId").value = raw;
+                const b = loadAll().find(x=>x.id===raw);
+                if(b) openDetailsModal(b);
+                else showBox($("scanInline"), "Not found", "Scanned code but booking not found.", "bad");
+                return;
+              }
+            }
+          }
+        }catch(e){}
+        raf=requestAnimationFrame(tick);
+      };
+      raf=requestAnimationFrame(tick);
+    }
+
+    $("openCameraBtn").addEventListener("click", startScanner);
+
+    /*********************
+     * PDF generation (Carrier/Internal/Cancelled)
+     *********************/
+    async function waitForLibs(){
+      // Wait for libs loaded
+      const max=80;
+      for(let i=0;i<max;i++){
+        if(window.jspdf && window.jspdf.jsPDF && window.QRCode && window.JsBarcode) return;
+        await new Promise(r=>setTimeout(r,50));
+      }
+      throw new Error("Libraries not loaded. Check internet/CDN.");
+    }
+
+    function downloadBlob(filename, blob){
+      // Works on Edge/Chrome/Safari
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href=url;
+      a.download=filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 250);
+    }
+
+    function makeQrDataUrl(text){
+      // Use QRCode to render into temp element then toDataURL via canvas
+      const tmp=document.createElement("div");
+      tmp.style.position="fixed";
+      tmp.style.left="-9999px";
+      tmp.style.top="-9999px";
+      document.body.appendChild(tmp);
+      new QRCode(tmp, { text, width:160, height:160, correctLevel: QRCode.CorrectLevel.M });
+      const canvas = tmp.querySelector("canvas");
+      const url = canvas ? canvas.toDataURL("image/png") : "";
+      tmp.remove();
+      return url;
+    }
+
+    function makeBarcodeDataUrl(text){
+      const canvas=document.createElement("canvas");
+      JsBarcode(canvas, text, {
+        format:"CODE128",
+        displayValue:false,
+        margin:0,
+        height:60
+      });
+      return canvas.toDataURL("image/png");
+    }
+
+    async function generatePdf(booking, mode){
+      await waitForLibs();
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit:"pt", format:"a4" });
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+
+      const isInternal = (mode==="internal");
+      const isCancelled = !!booking.cancelled;
+
+      // Background header
+      doc.setFillColor(8,17,27);
+      doc.rect(0,0,W,110,"F");
+      doc.setFillColor(46,168,255);
+      doc.rect(0,0,W,4,"F");
+
+      doc.setTextColor(234,242,255);
+      doc.setFont("helvetica","bold");
+      doc.setFontSize(18);
+      doc.text("Truck Unloading Ticket", 40, 48);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica","normal");
+      doc.setTextColor(200,215,235);
+      doc.text(isInternal ? "INTERNAL COPY (locked)" : "CARRIER COPY", 40, 68);
+
+      // Status
+      const st = statusLabel(booking);
+      doc.setFont("helvetica","bold");
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(11);
+      doc.text(`STATUS: ${st}`, W-200, 52);
+
+      // Card
+      doc.setDrawColor(220);
+      doc.setFillColor(255,255,255);
+      doc.roundedRect(30, 125, W-60, 360, 16, 16, "F");
+
+      // Cancelled overlay
+      if(isCancelled){
+        doc.setTextColor(255,77,77);
+        doc.setFontSize(120);
+        doc.setFont("helvetica","bold");
+        doc.text("X", W/2, H/2+40, { align:"center", angle: 15 });
+        doc.setFontSize(42);
+        doc.text("CANCELLED", W/2, 250, { align:"center", angle: 0 });
+      }
+
+      // Fields
+      doc.setTextColor(15, 30, 45);
+      doc.setFont("helvetica","bold");
+      doc.setFontSize(12);
+      doc.text("Booking", 50, 160);
+
+      doc.setFont("helvetica","normal");
+      doc.setFontSize(11);
+
+      const leftX=50, rightX=W/2+10;
+      const y0=185, lh=20;
+
+      const linesLeft = [
+        ["Booking ID", booking.id],
+        ["Date", booking.date],
+        ["Slot", `${booking.start} – ${booking.end}`],
+        ["Company", booking.company],
+        ["Truck plate", booking.plate],
+        ["Driver phone", booking.phone],
+        ["Package No", booking.packageNo],
+      ];
+
+      const linesRight = [
+        ["Arrived", booking.arrivedAt ? new Date(booking.arrivedAt).toLocaleString() : "—"],
+        ["Done", booking.doneAt ? new Date(booking.doneAt).toLocaleString() : "—"],
+        ["Auto complete", booking.completedAutomatically ? "YES" : "NO"],
+        ["Cancel reason", booking.cancelReason || "—"],
+      ];
+
+      let y=y0;
+      for(const [k,v] of linesLeft){
+        doc.setFont("helvetica","bold"); doc.text(`${k}:`, leftX, y);
+        doc.setFont("helvetica","normal"); doc.text(String(v||"—"), leftX+105, y);
+        y+=lh;
+      }
+
+      y=y0;
+      for(const [k,v] of linesRight){
+        doc.setFont("helvetica","bold"); doc.text(`${k}:`, rightX, y);
+        doc.setFont("helvetica","normal"); doc.text(String(v||"—"), rightX+105, y);
+        y+=lh;
+      }
+
+      // Barcode + QR
+      const qr = makeQrDataUrl(booking.id);
+      const bc = makeBarcodeDataUrl(booking.id);
+
+      if(bc){
+        doc.addImage(bc, "PNG", 50, 360, 320, 64);
+      }
+      if(qr){
+        doc.addImage(qr, "PNG", W-180, 340, 120, 120);
+      }
+
+      doc.setTextColor(120,130,140);
+      doc.setFontSize(9);
+      doc.text("Scan barcode or QR to retrieve shipment quickly.", 50, 450);
+
+      // Internal extra note
+      if(isInternal){
+        doc.setTextColor(15, 30, 45);
+        doc.setFont("helvetica","bold");
+        doc.setFontSize(11);
+        doc.text("Internal notes", 50, 505);
+        doc.setFont("helvetica","normal");
+        doc.setFontSize(10);
+        doc.text("Use ARRIVED when truck checks-in. Use DONE after unloading. Auto done triggers after slot end.", 50, 525, { maxWidth: W-100 });
+      }
+
+      // Output
+      const safeId = cleanPart(booking.id);
+      const statusTag = booking.cancelled ? "CANCELLED" : "ACTIVE";
+      const modeTag = isInternal ? "INTERNAL" : "CARRIER";
+      const fileName = `UNLOADING_${modeTag}_${statusTag}_${booking.date}_${booking.start.replace(":","")}_${safeId}.pdf`;
+
+      const arrayBuffer = doc.output("arraybuffer");
+      const blob = new Blob([arrayBuffer], { type:"application/pdf" });
+      downloadBlob(fileName, blob);
+    }
+
+    $("downloadCarrierPdfBtn").addEventListener("click", async ()=>{
+      if(!lastBookingId) return;
+      const b = loadAll().find(x=>x.id===lastBookingId);
+      if(!b) return;
+      try{ await generatePdf(b, "carrier"); }
+      catch(e){ alert("PDF error: " + e.message); console.error(e); }
+    });
+
+    $("downloadInternalPdfBtn").addEventListener("click", async ()=>{
+      if(!lastBookingId) return;
+      const b = loadAll().find(x=>x.id===lastBookingId);
+      if(!b) return;
+      try{ await generatePdf(b, "internal"); }
+      catch(e){ alert("PDF error: " + e.message); console.error(e); }
+    });
+
+    $("m_pdfCarrier").addEventListener("click", async ()=>{
+      if(!modalBookingId) return;
+      const b = loadAll().find(x=>x.id===modalBookingId);
+      if(!b) return;
+      try{ await generatePdf(b, "carrier"); }catch(e){ alert("PDF error: "+e.message); }
+    });
+    $("m_pdfInternal").addEventListener("click", async ()=>{
+      if(!modalBookingId) return;
+      const b = loadAll().find(x=>x.id===modalBookingId);
+      if(!b) return;
+      try{ await generatePdf(b, "internal"); }catch(e){ alert("PDF error: "+e.message); }
+    });
+    $("m_pdfCancelled").addEventListener("click", async ()=>{
+      if(!modalBookingId) return;
+      const b = loadAll().find(x=>x.id===modalBookingId);
+      if(!b) return;
+      try{ await generatePdf({...b, cancelled:true}, "carrier"); }catch(e){ alert("PDF error: "+e.message); }
+    });
+
+    /*********************
+     * Escape HTML
+     *********************/
+    function escapeHtml(s){
+      return String(s||"")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    /*********************
+     * Init
+     *********************/
+    $("dateInput").value = todayISO();
+    // render immediately
+    renderSlots();
+
+    // auto-complete timer
+    setInterval(()=>{
+      const changed=autoCompleteIfNeeded();
+      if(changed){
+        renderSlots();
+        refreshInternal();
+      }
+    }, 60000);
+  </script>
 </body>
 </html>
